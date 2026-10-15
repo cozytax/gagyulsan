@@ -279,7 +279,7 @@
     return { summary, note, points, checklist };
   }
 
-  /* 사장님께 부탁드리는 것 — 사무실에서 처리하는 결산·세무조정 업무는 넣지 않는다 */
+  /* 확인 요청 사항 — 사무실에서 처리하는 결산·세무조정 업무는 넣지 않는다 */
   function buildChecklist(rows, cost, tax, est) {
     const b = rows[rows.length - 1];
     const list = [];

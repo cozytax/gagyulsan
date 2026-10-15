@@ -226,7 +226,7 @@ ${r('예상 세금 합계', A.total, B.total, 'total')}
   <ul class="points">${points}</ul>
   <div class="two-col">
     ${options.showTax ? `<div><h3 class="sec">예상 세금 <small>${analysis.tax.entity === 'indiv' ? '종합소득세' : '법인세'} + 지방소득세</small></h3>${taxTable(analysis, unit)}</div>` : ''}
-    <div><h3 class="sec">사장님께 부탁드리는 것 <small>결산 전까지</small></h3><ol class="checklist">${fb.checklist.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
+    <div><h3 class="sec">확인 요청 사항 <small>결산 전까지</small></h3><ol class="checklist">${fb.checklist.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
   </div>
   <div class="disclaimer">본 보고서는 보고일 현재 장부를 기준으로 한 가결산 추정치이며, 실제 결산·세액은 기말 결산 결과에 따라 달라질 수 있습니다. 중요한 결정 전에는 담당자와 상의해 주세요.</div>
   <div class="page-foot"><span><img src="assets/logo_h.png" alt="" onerror="this.remove()">${esc(meta.title)}</span><span>${esc(meta.company)} · 2 / 2</span></div>
