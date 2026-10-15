@@ -96,7 +96,7 @@
       const li = document.createElement('li');
       if (f.error) { li.className = 'err'; li.innerHTML = `<span class="nm" title="${f.name}">${f.name}</span><span class="tag">읽기 실패</span><button class="x" title="제거">×</button><div style="flex-basis:100%;font-size:11.5px;color:#8a3f12">${f.error}</div>`; }
       else {
-        const tags = f.stmt.periods.map(p => `<span class="tag">${p.year}년 ${p.months}개월${p.kind === 'prev' ? '(전기)' : ''}</span>`).join('');
+        const tags = f.stmt.periods.map(p => { const empty = p.items.every(it => !it.value); return `<span class="tag" style="${empty ? 'opacity:.55' : ''}">${p.year}년 ${p.months}개월${p.kind === 'prev' ? '(전기)' : ''}${empty ? ' · 비어 있어 제외' : ''}</span>`; }).join('');
         li.innerHTML = `<span class="nm" title="${f.name}">${f.name}</span>${tags}<button class="x" title="제거">×</button>`;
       }
       li.querySelector('.x').onclick = () => removeFile(i);

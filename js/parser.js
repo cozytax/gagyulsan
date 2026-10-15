@@ -10,6 +10,7 @@
 
   const ROMAN = /^[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩⅪⅫIVX]+\s*[.．]?\s*/;
   const NUM_RE = /^[-△▲(]?[\d,]+\)?$/;
+  const RATIO_RE = /^[-△▲(]?\d+\.\d+%?\)?$/;   // 비율(%) 열: 100.00, 6.36 — 금액도 계정명도 아님
 
   function toNumber(tok) {
     let s = tok.replace(/,/g, '');
@@ -155,14 +156,14 @@
     // 계정명 들여쓰기 기준: 숫자가 있는 줄 중 가장 왼쪽 계정명 x = 대분류 위치
     let minLabelX = Infinity;
     for (const l of allLines) {
-      const hasNum = l.toks.some(t => NUM_RE.test(t.str));
-      const first = l.toks.find(t => !NUM_RE.test(t.str));
+      const hasNum = l.toks.some(t => NUM_RE.test(t.str) && !RATIO_RE.test(t.str));
+      const first = l.toks.find(t => !NUM_RE.test(t.str) && !RATIO_RE.test(t.str));
       if (hasNum && first) minLabelX = Math.min(minLabelX, first.x);
     }
 
     for (const l of allLines) {
       const labelToks = [], numToks = [];
-      for (const t of l.toks) (NUM_RE.test(t.str) ? numToks : labelToks).push(t);
+      for (const t of l.toks) { if (RATIO_RE.test(t.str)) continue; (NUM_RE.test(t.str) ? numToks : labelToks).push(t); }
       if (!numToks.length || !labelToks.length) continue;
       const rawLabel = labelToks.map(t => t.str).join('');
       const norm = normalizeLabel(rawLabel);

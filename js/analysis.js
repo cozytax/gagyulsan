@@ -64,6 +64,7 @@
     for (const s of statements) {
       for (const per of s.periods) {
         if (!per.year) { warnings.push(`${s.fileName}: 회계기간을 읽지 못해 건너뛰었습니다.`); continue; }
+        if (per.items.every(it => !it.value)) { warnings.push(`${s.fileName}: ${per.year}년(${per.kind === 'prev' ? '전기' : '당기'}) 열이 전부 0이라 제외했습니다.`); continue; }
         const y = periodToYear(s, per);
         const ex = byYear[per.year];
         if (!ex) { byYear[per.year] = y; continue; }
