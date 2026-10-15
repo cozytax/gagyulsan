@@ -193,7 +193,7 @@
       items.push({ label: norm, key, level: isMajor ? 'major' : 'detail', section: isMajor ? null : section, cur, prev });
     }
 
-    const entityType = entityHints.indiv > entityHints.corp ? 'indiv' : 'corp';
+    const entityType = (entityHints.corp > 0 && entityHints.indiv === 0) ? 'corp' : 'indiv';
 
     const out = [];
     const mk = (kind) => {

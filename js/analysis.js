@@ -156,20 +156,28 @@
     return 0;
   }
   function estimateTax(b, opts) {
-    const entity = opts.entityType || 'corp';
+    const entity = opts.entityType || C.defaultEntity || 'indiv';
     const credit = Math.min(1, Math.max(0, (opts.creditRate || 0) / 100));
+    const creditFixed = Math.max(0, opts.creditAmount || 0);
     const loss = Math.max(0, opts.lossCarry || 0);
     const calc = (pretax) => {
       const ded = entity === 'indiv' ? C.individualBasicDeduction : 0;
       const taxBase = Math.max(0, pretax - loss - ded);
       const brackets = entity === 'indiv' ? C.individualBrackets : C.corporateBrackets;
       const computed = Math.max(0, bracketTax(taxBase, brackets));
-      const creditAmt = computed * credit;
+      const creditAmt = Math.min(computed, computed * credit + creditFixed); // 산출세액을 넘지 않게
       const national = computed - creditAmt;
       const local = national * C.localTaxRate;
       return { taxBase, computed, creditAmt, national, local, total: national + local };
     };
-    return { entity, creditRate: credit * 100, loss, actual: calc(b.m.pretax), annual: calc(b.a.pretax) };
+    const hasCredit = !!(opts.creditType && opts.creditType !== 'none') && (credit > 0 || creditFixed > 0);
+    let creditLabel = '';
+    if (hasCredit) {
+      creditLabel = (opts.creditLabel || '공제·감면').replace(' (직접 입력)', ' 공제·감면');
+      const parts = []; if (credit > 0) parts.push(`${credit * 100}%`); if (creditFixed > 0) parts.push(`${Fmt.won(creditFixed)}원`);
+      if (parts.length) creditLabel += ` (${parts.join(' + ')})`;
+    }
+    return { entity, creditType: opts.creditType || 'none', creditRate: credit * 100, creditAmount: creditFixed, creditLabel, hasCredit, loss, actual: calc(b.m.pretax), annual: calc(b.a.pretax) };
   }
 
   /* ---------- 진단 문구 (규칙 기반) ---------- */

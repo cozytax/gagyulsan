@@ -182,11 +182,11 @@
 <tr><td>세전이익</td><td class="${b.m.pretax < 0 ? 'neg' : ''}">${Fmt.wonUnit(b.m.pretax, unit)}</td>${est ? `<td class="${b.a.pretax < 0 ? 'neg' : ''}">${Fmt.wonUnit(b.a.pretax, unit)}</td>` : ''}</tr>
 ${t.loss > 0 || t.entity === 'indiv' ? r(`과세표준${t.loss > 0 ? ' (이월결손금 차감)' : ''}`, 'taxBase') : ''}
 ${r(`${nm} 산출세액`, 'computed')}
-${t.creditRate > 0 ? r(`세액공제·감면 (${t.creditRate}%)`, 'creditAmt') : ''}
+${t.hasCredit ? r(`(−) ${t.creditLabel}`, 'creditAmt') : ''}
 ${r('지방소득세 (10%)', 'local')}
 ${r('예상 세금 합계', 'total', 'total')}
 </tbody></table>
-<p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) ${nm} 기본세율만 적용한 단순 추정입니다. ${t.entity === 'indiv' ? '소득공제는 본인 기본공제만 반영했고, ' : ''}세무조정(접대비 한도·감가상각 등), 각종 공제·감면, 중간예납 기납부세액은 반영하지 않았습니다.</p>`;
+<p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) ${nm} 기본세율만 적용한 단순 추정입니다. ${t.entity === 'indiv' ? '소득공제는 본인 기본공제만 반영했고, ' : ''}세무조정(접대비 한도·감가상각 등), ${t.hasCredit ? '선택한 항목 외의 공제·감면과 최저한세, ' : '각종 공제·감면, '}중간예납 기납부세액은 반영하지 않았습니다.</p>`;
   }
 
   function page3(model) {

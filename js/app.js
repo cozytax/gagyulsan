@@ -34,7 +34,7 @@
         if (!stmt.periods.length) throw new Error('손익계산서 항목을 찾지 못했습니다. 텍스트가 없는 스캔본이거나 양식이 다를 수 있습니다.');
         state.files.push({ name: f.name, stmt });
         if (!$('company').value && stmt.company) $('company').value = stmt.company;
-        if (!state._entitySet) { $('entity').value = stmt.entityType; }
+        if (!state._entitySet && stmt.entityType === 'corp') $('entity').value = 'corp';
       } catch (e) {
         console.error(e);
         state.files.push({ name: f.name, error: e.message || String(e) });
@@ -53,7 +53,7 @@
       const stmt = await window.Parser.parsePdf(buf, name);
       state.files.push({ name, stmt });
       if (!$('company').value && stmt.company) $('company').value = stmt.company;
-      $('entity').value = stmt.entityType;
+      if (!state._entitySet && stmt.entityType === 'corp') $('entity').value = 'corp';
     } catch (e) { console.error(e); toast('불러오기 실패: ' + e.message); }
     setBusy(false); recompute();
   }
@@ -81,7 +81,7 @@
     if (!state.years.length) { state.analysis = null; renderAll(); return; }
     state.analysis = A.analyze(state.years, {
       entityType: $('entity').value,
-      creditRate: parseFloat($('credit').value) || 0,
+      ...readCredit(),
       lossCarry: parseInt(String($('loss').value).replace(/[^\d-]/g, ''), 10) || 0,
     });
     renderAll();
@@ -181,6 +181,30 @@
 
   function renderAll() { renderFiles(); renderData(); renderWarnings(); renderReport(); }
 
+  /* ---------- 공제·감면 선택 ---------- */
+  function creditDef() { return C.creditTypes.find(t => t.key === $('creditType').value) || C.creditTypes[0]; }
+  function readCredit() {
+    const t = creditDef();
+    let rate = 0, amount = 0;
+    if (t.mode === 'rate') rate = parseFloat($('creditRate').value) || 0;
+    if (t.mode === 'both') rate = parseFloat($('creditRateFree').value) || 0;
+    if (t.mode === 'amount' || t.mode === 'both') amount = parseInt(String($('creditAmt').value).replace(/[^\d]/g, ''), 10) || 0;
+    return { creditType: t.key, creditLabel: t.label, creditRate: rate, creditAmount: amount };
+  }
+  function syncCreditUI() {
+    const t = creditDef();
+    $('creditRateWrap').style.display = (t.mode === 'rate' || t.mode === 'both') ? '' : 'none';
+    $('creditAmtWrap').style.display = (t.mode === 'amount' || t.mode === 'both') ? '' : 'none';
+    $('creditRate').style.display = t.mode === 'rate' ? '' : 'none';
+    $('creditRateFree').style.display = t.mode === 'both' ? '' : 'none';
+    if (t.mode === 'rate') {
+      const sel = $('creditRate'); const cur = sel.value; sel.innerHTML = '';
+      t.rates.forEach(r => { const o = document.createElement('option'); o.value = r; o.textContent = r + '%'; sel.appendChild(o); });
+      sel.value = t.rates.includes(+cur) ? cur : t.rates[0];
+    }
+    $('creditHint').textContent = t.hint || '';
+  }
+
   /* ---------- PDF 저장(인쇄) ---------- */
   function printReport() {
     if (!state.analysis) return;
@@ -222,7 +246,12 @@
     document.addEventListener('dragover', e => e.preventDefault()); document.addEventListener('drop', e => e.preventDefault());
 
     ['title', 'company', 'firm', 'preparer', 'date', 'unit', 'showTax'].forEach(id => $(id).addEventListener('input', () => { pref.set(id, $(id).value); renderReport(); }));
-    ['entity', 'credit', 'loss'].forEach(id => $(id).addEventListener('input', () => { if (id === 'entity') state._entitySet = true; recompute(); }));
+    $('entity').value = C.defaultEntity || 'indiv';
+    const ct = $('creditType'); C.creditTypes.forEach(t => { const o = document.createElement('option'); o.value = t.key; o.textContent = t.label; ct.appendChild(o); });
+    syncCreditUI();
+    ct.addEventListener('change', () => { syncCreditUI(); recompute(); });
+    ['entity', 'creditRate', 'creditRateFree', 'creditAmt', 'loss'].forEach(id => $(id).addEventListener('input', () => { if (id === 'entity') state._entitySet = true; recompute(); }));
+    $('creditAmt').addEventListener('change', () => { const v = parseInt(String($('creditAmt').value).replace(/[^\d]/g, ''), 10); $('creditAmt').value = v ? v.toLocaleString('ko-KR') : ''; });
     $('btnPrint').onclick = printReport;
     $('btnAddYear').onclick = () => {
       const yr = parseInt(prompt('추가할 연도를 입력하세요 (예: 2024)'), 10);
@@ -231,7 +260,7 @@
       state.manual[yr] = { m: { sales: 0, cogs: 0, sga: 0, nonOpInc: 0, nonOpExp: 0, tax: 0 }, months: 12 };
       recompute(); toast(`${yr}년 열을 추가했습니다. 아래 표에 금액을 입력하세요.`);
     };
-    $('btnReset').onclick = () => { if (!confirm('올린 파일과 수정한 값을 모두 지울까요?')) return; state.files = []; state.manual = {}; state.edits = {}; state._entitySet = false; $('company').value = ''; recompute(); };
+    $('btnReset').onclick = () => { if (!confirm('올린 파일과 수정한 값을 모두 지울까요?')) return; state.files = []; state.manual = {}; state.edits = {}; state._entitySet = false; $('company').value = ''; $('entity').value = C.defaultEntity || 'indiv'; recompute(); };
 
     renderAll();
     const q = new URLSearchParams(location.search).get('load');
