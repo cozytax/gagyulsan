@@ -106,15 +106,16 @@ table.pl td.neg { color: var(--warn); }
 .summary { border: 1px solid var(--navy); background: #f4f6fb; padding: 3mm 4mm; margin-bottom: 3mm; }
 .summary .lbl { font-size: 8pt; letter-spacing: 0.2em; color: var(--navy); font-weight: 700; }
 .summary p { margin: 1mm 0 0; font-size: 10.5pt; font-weight: 600; color: var(--ink); line-height: 1.55; }
+.summary .note { margin-top: 1.5mm; font-size: 7.8pt; color: var(--muted); line-height: 1.45; }
 
 /* 진단 포인트 */
 .points { list-style: none; margin: 0; padding: 0; }
-.points li { display: grid; grid-template-columns: 4.5mm 1fr; gap: 1.5mm; padding: 1.6mm 0; border-bottom: 1px dashed var(--line-soft); }
+.points li { display: grid; grid-template-columns: 4.5mm 1fr; gap: 1.5mm; padding: 2mm 0; border-bottom: 1px dashed var(--line-soft); }
 .points li:last-child { border-bottom: 0; }
 .points .dot { width: 3.4mm; height: 3.4mm; border-radius: 50%; margin-top: 1.2mm; }
 .points .dot.good { background: var(--good); } .points .dot.warn { background: var(--warn); } .points .dot.info { background: var(--y2); }
-.points b { display: block; font-size: 9.3pt; color: var(--ink); margin-bottom: 0.3mm; }
-.points p { margin: 0; font-size: 8.9pt; color: var(--ink-2); line-height: 1.5; }
+.points b { display: block; font-size: 9.6pt; color: var(--ink); margin-bottom: 0.4mm; }
+.points p { margin: 0; font-size: 9.2pt; color: var(--ink-2); line-height: 1.5; }
 
 /* 비용 구조·세액 표 */
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
@@ -124,7 +125,7 @@ table.mini th:first-child, table.mini td:first-child { text-align: left; }
 table.mini td { text-align: right; font-variant-numeric: tabular-nums; }
 table.mini tr.total td { font-weight: 700; border-top: 1px solid var(--line); background: #f8f9fc; }
 table.mini td.neg { color: var(--warn); }
-.checklist { margin: 0; padding-left: 5mm; font-size: 8.6pt; color: var(--ink-2); line-height: 1.5; }
+.checklist { margin: 0; padding-left: 5mm; font-size: 8.8pt; color: var(--ink-2); line-height: 1.5; }
 .checklist li { margin-bottom: 1.2mm; padding-left: 0.5mm; }
 .checklist li::marker { color: var(--navy); font-weight: 700; }
 .saving { margin-top: 2.5mm; border: 1.2px solid var(--good); background: #f1f8f4; padding: 2.2mm 3mm; }

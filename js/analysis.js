@@ -192,135 +192,103 @@
     return { entity, creditType: opts.creditType || 'none', creditRate: credit * 100, creditAmount: creditFixed, creditLabel, hasCredit, loss, actual, annual, extra };
   }
 
-  /* ---------- 진단 문구 (규칙 기반) ---------- */
+  /* ---------- 진단 문구 (규칙 기반) — 사장님이 읽는 글. 짧게, 결론부터. ---------- */
   function buildFeedback(rows, cost, tax, opts) {
     const T = C.thresholds;
     const b = rows[rows.length - 1], p = rows[rows.length - 2] || null, pp = rows[rows.length - 3] || null;
-    const yr = b.year, mon = b.months;
     const est = b.isBase && b.factor !== 1;
-    const estWord = est ? '연환산 기준 ' : '';
+    const yr = b.year;
+    const nm = tax.entity === 'indiv' ? '종합소득세' : '법인세';
     const points = [];
     const push = (tone, title, body) => points.push({ tone, title, body });
 
     // 1. 매출
-    if (p) {
+    if (p && b.g.sales !== null) {
       const g = b.g.sales;
-      if (g === null) push('info', '매출', `전년 매출 자료가 없어 증감을 비교하지 못했습니다. 올해 ${estWord}매출은 ${Fmt.man(b.a.sales)}입니다.`);
-      else if (Math.abs(g) <= T.growthFlat) push('info', '매출은 전년과 비슷한 수준', `올해 ${estWord}매출 ${Fmt.man(b.a.sales)}로 전년(${Fmt.man(p.a.sales)})과 비슷합니다(${Fmt.delta(g)}).`);
-      else if (g > 0) {
-        let s = `올해 ${estWord}매출은 ${Fmt.man(b.a.sales)}로 전년 ${Fmt.man(p.a.sales)}보다 ${g.toFixed(1)}% 늘어날 것으로 보입니다.`;
-        if (pp && p.g.sales !== null && p.g.sales > T.growthFlat) s += ' 2년 연속 성장 흐름입니다.';
-        push('good', '매출 증가', s);
-      } else {
-        let s = `올해 ${estWord}매출은 ${Fmt.man(b.a.sales)}로 전년 ${Fmt.man(p.a.sales)}보다 ${Math.abs(g).toFixed(1)}% 줄어들 것으로 보입니다.`;
-        if (pp && p.g.sales !== null && p.g.sales < -T.growthFlat) s += ' 2년 연속 감소라 원인 점검이 필요합니다.';
-        else s += ' 남은 기간 매출 회복 여부를 지켜봐야 합니다.';
-        push('warn', '매출 감소', s);
-      }
+      if (Math.abs(g) <= T.growthFlat) push('info', '매출은 전년 수준', `올해 매출 ${Fmt.man(b.a.sales)}, 전년(${Fmt.man(p.a.sales)})과 비슷합니다.`);
+      else if (g > 0) push('good', `매출 ${g.toFixed(0)}% 증가`, `올해 매출 ${Fmt.man(b.a.sales)}, 전년 ${Fmt.man(p.a.sales)}보다 늘었습니다.` + (pp && p.g.sales !== null && p.g.sales > T.growthFlat ? ' 2년 연속 성장입니다.' : ''));
+      else push('warn', `매출 ${Math.abs(g).toFixed(0)}% 감소`, `올해 매출 ${Fmt.man(b.a.sales)}, 전년 ${Fmt.man(p.a.sales)}보다 줄었습니다.` + (pp && p.g.sales !== null && p.g.sales < -T.growthFlat ? ' 2년 연속 감소입니다.' : ''));
     } else {
-      push('info', '매출', `올해 ${estWord}매출은 ${Fmt.man(b.a.sales)}입니다. 전년 자료를 함께 올리면 추이를 비교해 드립니다.`);
+      push('info', '올해 매출', `${Fmt.man(b.a.sales)}입니다.` + (p ? '' : ' 전년 자료가 있으면 추이를 비교해 드립니다.'));
     }
 
-    // 2. 영업이익·수익성
+    // 2. 영업이익
     {
       const om = b.r.opMargin;
       const turned = p ? ((p.a.op <= 0 && b.a.op > 0) ? 'toProfit' : (p.a.op > 0 && b.a.op <= 0) ? 'toLoss' : null) : null;
-      if (turned === 'toProfit') push('good', '영업이익 흑자 전환', `전년 영업손실 ${Fmt.man(Math.abs(p.a.op))}에서 올해 ${estWord}영업이익 ${Fmt.man(b.a.op)}으로 흑자 전환이 예상됩니다.`);
-      else if (turned === 'toLoss') push('warn', '영업이익 적자 전환', `전년 영업이익 ${Fmt.man(p.a.op)}에서 올해 ${estWord}영업손실 ${Fmt.man(Math.abs(b.a.op))}으로 적자가 예상됩니다. 매출 대비 비용 구조를 먼저 살펴봐야 합니다.`);
-      else if (b.a.op <= 0) push('warn', '영업손실 지속', `올해 ${estWord}영업손실은 ${Fmt.man(Math.abs(b.a.op))}입니다. 매출 ${Fmt.man(b.a.sales)}에 비해 비용(매출원가+판관비) ${Fmt.man(b.a.cogs + b.a.sga)}이 더 큽니다.`);
-      else if (om !== null && om < T.opMarginLow) push('warn', '영업이익률 낮음', `매출 100원당 영업이익이 ${om.toFixed(1)}원(영업이익률 ${Fmt.pct(om)})으로 낮은 편입니다. 가격·원가·고정비 중 어디서 이익이 새는지 확인이 필요합니다.`);
-      else if (om !== null && om >= T.opMarginGood) push('good', '영업이익률 양호', `매출 100원당 영업이익이 ${om.toFixed(1)}원(영업이익률 ${Fmt.pct(om)})으로 양호합니다.` + (p && p.r.opMargin !== null ? ` 전년 ${Fmt.pct(p.r.opMargin)}에서 ${om >= p.r.opMargin ? '개선' : '다소 하락'}했습니다.` : ''));
-      else if (om !== null) push('info', '영업이익률 보통', `영업이익률은 ${Fmt.pct(om)}입니다.` + (p && p.r.opMargin !== null ? ` 전년 ${Fmt.pct(p.r.opMargin)} 대비 ${om >= p.r.opMargin ? '개선' : '하락'}했습니다.` : ''));
+      if (turned === 'toProfit') push('good', '흑자 전환', `전년 영업손실 ${Fmt.man(Math.abs(p.a.op))} → 올해 영업이익 ${Fmt.man(b.a.op)}. 적자에서 벗어났습니다.`);
+      else if (turned === 'toLoss') push('warn', '적자 전환', `전년 영업이익 ${Fmt.man(p.a.op)} → 올해 영업손실 ${Fmt.man(Math.abs(b.a.op))}. 매출 대비 비용이 커졌습니다.`);
+      else if (b.a.op <= 0) push('warn', '영업손실 지속', `올해 영업손실 ${Fmt.man(Math.abs(b.a.op))}. 매출 ${Fmt.man(b.a.sales)}보다 비용 ${Fmt.man(b.a.cogs + b.a.sga)}이 큽니다.`);
+      else if (om !== null && om < T.opMarginLow) push('warn', '이익률 낮음', `매출 100원에 영업이익 ${om.toFixed(1)}원(영업이익률 ${Fmt.pct(om)}). 가격·원가·고정비 점검이 필요합니다.`);
+      else if (om !== null && om >= T.opMarginGood) push('good', '이익률 양호', `매출 100원에 영업이익 ${om.toFixed(1)}원(영업이익률 ${Fmt.pct(om)}).` + (p && p.r.opMargin !== null ? ` 전년 ${Fmt.pct(p.r.opMargin)}에서 ${om >= p.r.opMargin ? '개선' : '하락'}.` : ''));
+      else if (om !== null) push('info', '이익률 보통', `영업이익률 ${Fmt.pct(om)}` + (p && p.r.opMargin !== null ? `, 전년 ${Fmt.pct(p.r.opMargin)} 대비 ${om >= p.r.opMargin ? '개선' : '하락'}.` : '.'));
     }
 
-    // 3. 매출총이익률 변화 (원가가 있는 업종)
+    // 3. 원가율 (원가가 있는 업종만)
     if (p && b.a.cogs > 0 && p.a.cogs > 0 && b.r.grossMargin !== null && p.r.grossMargin !== null) {
       const d = b.r.grossMargin - p.r.grossMargin;
       if (Math.abs(d) >= 3) push(d > 0 ? 'good' : 'warn', d > 0 ? '원가율 개선' : '원가율 상승',
-        `매출총이익률이 전년 ${Fmt.pct(p.r.grossMargin)}에서 ${Fmt.pct(b.r.grossMargin)}로 ${Math.abs(d).toFixed(1)}%p ${d > 0 ? '올랐습니다. 원가 관리가 잘 되고 있습니다.' : '내려갔습니다. 매입단가나 판매가격 변동을 확인해 보세요.'}`);
+        `매출총이익률 ${Fmt.pct(p.r.grossMargin)} → ${Fmt.pct(b.r.grossMargin)}. ${d > 0 ? '원가 관리가 잘 되고 있습니다.' : '매입단가나 판매가격 변동을 확인해 보세요.'}`);
     }
 
-    // 4. 판관비·비용 구조
-    if (cost.hasDetail) {
-      const top = cost.items.slice(0, 3).filter(it => it.curA > 0);
-      if (top.length) {
-        const s = top.map(it => `${it.label} ${Fmt.man(it.curA)}(매출의 ${Fmt.pct(it.share)})`).join(', ');
-        push('info', '비용은 어디에 많이 쓰이나', `판관비 중 큰 항목은 ${s} 순입니다.` + (b.r.sgaRatio !== null ? ` 판관비 전체는 매출의 ${Fmt.pct(b.r.sgaRatio)}` + (p && p.r.sgaRatio !== null ? `(전년 ${Fmt.pct(p.r.sgaRatio)})` : '') + '입니다.' : ''));
-      }
-      if (p) {
-        const surges = cost.items.filter(it => it.change !== null && it.change >= T.itemSurgePct && it.share !== null && it.share >= T.itemMinShare && it.prev > 0);
-        if (surges.length) {
-          const s = surges.slice(0, 3).map(it => `${it.label}(${Fmt.man(it.prev)} → ${Fmt.man(it.curA)}, ${Fmt.delta(it.change)})`).join(', ');
-          push('warn', '전년보다 크게 늘어난 비용', `${estWord}${s}. 증가 이유가 일시적인지 구조적인지 확인이 필요합니다.`);
-        }
-        // 전년에 컸는데 올해 거의 사라진 비용 (급여 미반영 등 장부 누락 가능성)
-        const drops = cost.items.filter(it => it.change !== null && it.change <= -70 && p.a.sales > 0 && it.prev / Math.abs(p.a.sales) * 100 >= T.itemMinShare);
-        if (drops.length) {
-          const s = drops.slice(0, 3).map(it => `${it.label}(전년 ${Fmt.man(it.prev)} → 올해 ${Fmt.man(it.curA)})`).join(', ');
-          push('warn', '전년보다 크게 줄어든 비용', `${s}. 실제로 줄어든 것인지, 아직 장부에 반영되지 않은 것인지 확인이 필요합니다. 누락된 비용이 있으면 이익과 세금이 실제보다 크게 계산됩니다.`);
-        }
-      }
-      if (cost.labor.share !== null && cost.labor.share >= T.laborRatioHigh) push('warn', '인건비 비중 높음', `인건비(급여·상여 등)가 매출의 ${Fmt.pct(cost.labor.share)}를 차지합니다. 인력 대비 매출이 충분한지 점검해 보세요.`);
+    // 4. 비용 — 크게 늘거나 줄어든 항목만
+    if (cost.hasDetail && p) {
+      const surges = cost.items.filter(it => it.change !== null && it.change >= T.itemSurgePct && it.share !== null && it.share >= T.itemMinShare && it.prev > 0);
+      if (surges.length) push('warn', '크게 늘어난 비용', surges.slice(0, 3).map(it => `${it.label} ${Fmt.man(it.prev)} → ${Fmt.man(it.curA)}`).join(', ') + '. 일시적인지 계속될지 봐야 합니다.');
+      const drops = cost.items.filter(it => it.change !== null && it.change <= -70 && p.a.sales > 0 && it.prev / Math.abs(p.a.sales) * 100 >= T.itemMinShare);
+      if (drops.length) push('info', '크게 줄어든 비용', drops.slice(0, 3).map(it => `${it.label} ${Fmt.man(it.prev)} → ${Fmt.man(it.curA)}`).join(', ') + '. 아직 안 넘겨주신 지출이 있으면 알려주세요.');
+      if (cost.labor.share !== null && cost.labor.share >= T.laborRatioHigh) push('warn', '인건비 비중 높음', `인건비가 매출의 ${Fmt.pct(cost.labor.share)}입니다. 인력 대비 매출이 충분한지 점검해 보세요.`);
     }
 
-    // 5. 영업외 — 이자비용
+    // 5. 이자 부담
     if (cost.interest > 0 && b.a.sales > 0) {
       const sh = ratio(cost.interest, b.a.sales);
-      if (sh >= 2) push('warn', '이자 부담', `이자비용이 ${estWord}${Fmt.man(cost.interest)}로 매출의 ${Fmt.pct(sh)}입니다. 차입금 규모와 금리 조건을 점검할 필요가 있습니다.`);
+      if (sh >= 2) push('warn', '이자 부담', `이자비용 ${Fmt.man(cost.interest)}, 매출의 ${Fmt.pct(sh)}입니다. 차입 규모와 금리 조건을 점검해 보세요.`);
     }
 
-    // 6. 당기순이익·세금
+    // 6. 순이익·세금
     {
-      const net = b.a.net;
+      const net = b.a.net; const tx = tax.annual;
       if (net > 0) {
-        const tx = tax.annual;
-        let s = `올해 ${estWord}당기순이익은 ${Fmt.man(net)}` + (b.r.netMargin !== null ? `(순이익률 ${Fmt.pct(b.r.netMargin)})` : '') + '로 예상됩니다.';
-        if (tx.total > 0) s += ` 이대로 결산하면 ${tax.entity === 'indiv' ? '종합소득세' : '법인세'}는 지방소득세 포함 약 ${Fmt.man(tx.total)} 수준입니다.`;
-        if (est) s += ` 남은 ${12 - mon}개월 동안 누락된 경비·증빙을 챙기고, 적용 가능한 세액공제(고용·투자 등)를 미리 검토하면 세부담을 줄일 수 있습니다.`;
-        push(tx.total > 0 ? 'info' : 'good', '예상 순이익과 세금', s);
+        let s = `올해 순이익 ${Fmt.man(net)}` + (b.r.netMargin !== null ? `(순이익률 ${Fmt.pct(b.r.netMargin)})` : '') + ' 예상.';
+        if (tx.total > 0) s += ` 이대로면 ${nm} 약 ${Fmt.man(tx.total)}(지방소득세 포함)입니다.`;
+        else s += ` 공제·감면 적용 후 ${nm}는 거의 없을 것으로 보입니다.`;
+        push('info', '예상 순이익과 세금', s);
       } else {
-        push('info', '순손실 예상', `올해 ${estWord}당기순손실은 ${Fmt.man(Math.abs(net))}입니다. 올해 세금은 거의 없을 것으로 보이며, 결손금은 이후 연도 이익에서 공제(이월결손금)할 수 있으니 신고를 빠뜨리지 않는 것이 중요합니다.`);
+        push('info', '순손실 예상', `올해 순손실 ${Fmt.man(Math.abs(net))}. 올해 세금은 거의 없고, 손실은 다음 해 이익에서 공제됩니다.`);
       }
     }
 
-    // 6-1. 추가 비용 시뮬레이션
+    // 7. 추가 비용 시뮬레이션
     if (tax.extra) {
-      const x = tax.extra; const nm = tax.entity === 'indiv' ? '종합소득세' : '법인세';
-      const list = x.items.filter(it => it.label).map(it => `${it.label} ${Fmt.man(it.amount)}`).join(', ');
-      let s = `${list ? list + ' 등 ' : ''}비용 ${Fmt.man(x.total)}을 올해 안에 추가로 반영하면 ${estWord}${nm}(지방소득세 포함)는 ${Fmt.man(tax.annual.total)}에서 ${Fmt.man(x.after.total)}으로 약 ${Fmt.man(x.saved)} 줄어듭니다.`;
-      if (x.saved > 0) s += ` 지출 100원당 세금이 약 ${x.marginal.toFixed(0)}원 줄어드는 셈이며, 세금을 뺀 실제 부담은 ${Fmt.man(x.netCost)}입니다.`;
-      else s += ' 이미 납부할 세금이 거의 없어 추가 비용으로 줄어드는 세금은 없습니다.';
-      s += ' 추가 비용은 실제 지출과 증빙이 있어야 인정됩니다.';
-      push(x.saved > 0 ? 'good' : 'info', '추가 비용 반영 시 세금 변화', s);
+      const x = tax.extra;
+      if (x.saved > 0) push('good', '추가 비용 반영 시', `비용 ${Fmt.man(x.total)}을 더 반영하면 세금 ${Fmt.man(tax.annual.total)} → ${Fmt.man(x.after.total)}, ${Fmt.man(x.saved)} 줄어듭니다. 실제 지출과 증빙이 있어야 합니다.`);
+      else push('info', '추가 비용 반영 시', `비용 ${Fmt.man(x.total)}을 더 반영해도 낼 세금이 거의 없어 줄어드는 세금은 없습니다.`);
     }
 
-    // 7. 환산 주의
-    if (est) push('info', '12개월 환산에 대하여', `올해 수치는 ${b.startMonth || 1}월~${b.endMonth || mon}월 ${mon}개월 실적에 ${(12 / mon).toFixed(2)}배를 곱해 1년치로 추정한 것입니다. 계절적으로 매출이 몰리는 달이 있거나 연말에 큰 지출이 예정되어 있다면 실제 결산과 차이가 날 수 있습니다.`);
+    // 최대 6개: 넘치면 '참고' 성격부터 뺀다
+    while (points.length > 6) {
+      const i = points.map(x => x.tone).lastIndexOf('info');
+      points.splice(i >= 0 ? i : points.length - 1, 1);
+    }
 
-    // 총평 한 줄
     const summary = buildSummary(rows, est);
+    const note = est ? `올해 수치는 ${b.startMonth || 1}~${b.endMonth || b.months}월 ${b.months}개월 실적을 12개월로 단순 환산한 추정치입니다. 매출이 몰리는 달이나 연말 큰 지출이 있으면 실제와 차이가 날 수 있습니다.` : '';
     const checklist = buildChecklist(rows, cost, tax, est);
-    return { summary, points, checklist };
+    return { summary, note, points, checklist };
   }
 
-  /* 남은 기간 체크리스트 (상황별) */
+  /* 사장님께 부탁드리는 것 — 사무실에서 처리하는 결산·세무조정 업무는 넣지 않는다 */
   function buildChecklist(rows, cost, tax, est) {
-    const b = rows[rows.length - 1], p = rows[rows.length - 2] || null;
+    const b = rows[rows.length - 1];
     const list = [];
-    list.push('매출·매입 세금계산서, 카드·현금영수증 등 증빙 누락 여부 점검');
-    if (cost.labor.cur === 0 && cost.hasDetail) list.push(tax.entity === 'corp' ? '급여(대표이사 포함)·4대보험이 장부에 반영되지 않았습니다. 급여 책정·반영 여부 확인' : '급여·4대보험 반영 여부 확인');
-    else list.push('급여·4대보험·퇴직급여 반영 여부 확인');
-    const dep = cost.items.find(it => it.label.includes('감가상각'));
-    if (p && dep && dep.prev > 0 && dep.cur === 0) list.push('감가상각비 등 결산 때 반영되는 비용은 아직 빠져 있음 — 기말에 반영 예정');
-    else list.push('감가상각비·미지급비용 등 결산조정 항목 반영');
-    if (b.a.pretax > 0) {
-      list.push('고용증대·통합투자·중소기업특별세액감면 등 적용 가능한 공제·감면 검토');
-      if (tax.entity === 'corp' && est) list.push('중간예납 세액과 기납부세액 확인 후 연말 납부 자금 준비');
-      else if (est) list.push('연말 납부 자금(예상 세금) 미리 준비');
-    } else {
-      list.push('결손금 이월공제를 받으려면 기한 내 신고가 필수 — 신고 누락 주의');
-    }
-    return list.slice(0, 5);
+    list.push('아직 전달하지 않은 세금계산서·카드·현금영수증 등 증빙이 있으면 보내주세요.');
+    if (cost.hasDetail && cost.labor.cur === 0) list.push(tax.entity === 'corp' ? '대표이사 급여를 어떻게 책정할지 정해 주세요. 급여 반영 여부에 따라 세금이 달라집니다.' : '급여 지급이 있었다면 내역을 알려주세요.');
+    else list.push('직원 채용·급여 변경 계획이 있으면 알려주세요. 고용 관련 공제를 검토합니다.');
+    list.push('연말까지 예정된 큰 지출(비품·차량·퇴직연금 등)이 있으면 미리 알려주세요. 절세 효과를 계산해 드립니다.');
+    if (b.a.pretax > 0 && tax.annual.total > 0) list.push(`${est ? '내년 신고 때' : '신고 때'} 납부할 세금(예상 ${Fmt.man(tax.annual.total)})을 미리 준비해 두세요.`);
+    else if (b.a.pretax <= 0) list.push('올해는 손실이라 세금 부담은 거의 없습니다. 손실을 다음 해에 공제받도록 저희가 신고합니다.');
+    return list.slice(0, 4);
   }
 
   function buildSummary(rows, est) {

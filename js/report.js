@@ -215,7 +215,7 @@ ${r('예상 세금 합계', A.total, B.total, 'total')}
     return `
 <section class="page">
   <div class="page-head"><h2><span>Ⅱ.</span>진단과 피드백</h2><div class="meta">${esc(meta.company)}<br>${esc(periodText(b))} 기준</div></div>
-  <div class="summary"><div class="lbl">총 평</div><p>${esc(fb.summary)}</p></div>
+  <div class="summary"><div class="lbl">총 평</div><p>${esc(fb.summary)}</p>${fb.note ? `<div class="note">※ ${esc(fb.note)}</div>` : ''}</div>
   <div class="ratios">
     ${ratioCard('매출총이익률', 'grossMargin', analysis)}
     ${ratioCard('영업이익률', 'opMargin', analysis)}
@@ -226,9 +226,9 @@ ${r('예상 세금 합계', A.total, B.total, 'total')}
   <ul class="points">${points}</ul>
   <div class="two-col">
     ${options.showTax ? `<div><h3 class="sec">예상 세금 <small>${analysis.tax.entity === 'indiv' ? '종합소득세' : '법인세'} + 지방소득세</small></h3>${taxTable(analysis, unit)}</div>` : ''}
-    <div><h3 class="sec">남은 기간 챙길 것 <small>결산 전 점검</small></h3><ol class="checklist">${fb.checklist.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
+    <div><h3 class="sec">사장님께 부탁드리는 것 <small>결산 전까지</small></h3><ol class="checklist">${fb.checklist.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
   </div>
-  <div class="disclaimer">본 보고서는 보고일 현재까지 입력된 장부 자료를 바탕으로 작성한 가결산 자료이며, 12개월 환산 수치는 단순 비례 추정값입니다. 실제 결산 및 세액은 기말 결산조정과 세무조정 결과에 따라 달라질 수 있으므로, 중요한 의사결정 전에는 담당 세무사와 상의해 주시기 바랍니다.</div>
+  <div class="disclaimer">본 보고서는 보고일 현재 장부를 기준으로 한 가결산 추정치이며, 실제 결산·세액은 기말 결산 결과에 따라 달라질 수 있습니다. 중요한 결정 전에는 담당자와 상의해 주세요.</div>
   <div class="page-foot"><span><img src="assets/logo_h.png" alt="" onerror="this.remove()">${esc(meta.title)}</span><span>${esc(meta.company)} · 2 / 2</span></div>
 </section>`;
   }
