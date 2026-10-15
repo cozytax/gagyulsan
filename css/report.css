@@ -1,0 +1,153 @@
+/* =====================================================================
+ *  report.css — A4 보고서 (화면 미리보기 + 인쇄 공통)
+ * ===================================================================== */
+:root {
+  --navy: #14487e;
+  --navy-deep: #0c3c6c;
+  --ink: #1d2433;
+  --ink-2: #4b5563;
+  --muted: #7b8494;
+  --line: #d6dbe3;
+  --line-soft: #e8ecf1;
+  --cream: #f6f1e4;
+  --cream-deep: #efe6cf;
+  --paper: #ffffff;
+  --good: #1f7a4d;
+  --warn: #b4531a;
+  --info: #2f4f7f;
+  --y1: #b9c6dc;   /* 2년 전 */
+  --y2: #6a84ad;   /* 1년 전 */
+  --y3: #14487e;   /* 올해 실적 */
+  --y3e: #9fb0cc;  /* 올해 연환산(추정) */
+}
+
+.page {
+  width: 210mm; height: 297mm; box-sizing: border-box;
+  padding: 16mm 17mm 14mm; background: var(--paper); color: var(--ink);
+  font-family: 'Pretendard', 'Malgun Gothic', sans-serif; font-size: 9.6pt; line-height: 1.5;
+  position: relative; overflow: hidden; word-break: keep-all;
+}
+.page * { box-sizing: border-box; }
+.page table { border-collapse: collapse; width: 100%; }
+
+/* ---------- 표지 ---------- */
+.cover { padding: 0; display: flex; flex-direction: column; }
+.cover .rule-top { height: 7mm; background: var(--navy); }
+.cover .rule-top-thin { height: 1.2mm; background: var(--cream-deep); }
+.cover .body { flex: 1; padding: 0 20mm; display: flex; flex-direction: column; }
+.cover .fy { margin-top: 34mm; font-family: 'Noto Serif KR', serif; font-size: 11pt; letter-spacing: 0.35em; color: var(--ink-2); text-align: center; }
+.cover .title-band { margin-top: 10mm; padding: 11mm 0; background: var(--cream); border-top: 1.6px solid var(--navy); border-bottom: 1.6px solid var(--navy); text-align: center; }
+.cover .title-band h1 { margin: 0; font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 36pt; letter-spacing: 0.42em; text-indent: 0.42em; color: var(--navy-deep); }
+.cover .sub { text-align: center; margin-top: 7mm; color: var(--ink-2); font-size: 10.5pt; letter-spacing: 0.06em; }
+.cover .sub .period { font-weight: 600; color: var(--ink); }
+.cover .company-box { margin: 36mm auto 0; width: 110mm; padding: 6mm 8mm; border: 1.2px solid var(--navy); text-align: center; font-size: 17pt; font-weight: 700; letter-spacing: 0.1em; background: #fffdf8; }
+.cover .company-box small { display: block; font-size: 8.5pt; font-weight: 500; letter-spacing: 0.3em; color: var(--muted); margin-bottom: 2mm; }
+.cover .meta { margin-top: 10mm; text-align: center; color: var(--ink-2); font-size: 9.5pt; line-height: 1.9; }
+.cover .firm { margin-top: auto; text-align: center; font-family: 'Noto Serif KR', serif; font-size: 15pt; font-weight: 700; letter-spacing: 0.45em; text-indent: 0.45em; color: var(--navy-deep); }
+.cover .firm img { width: 42mm; height: auto; display: block; margin: 0 auto; }
+.cover .firm small { display: block; font-family: 'Pretendard', sans-serif; font-size: 8pt; font-weight: 400; letter-spacing: 0.1em; text-indent: 0; color: var(--muted); margin-top: 2mm; }
+.cover .foot { margin: 10mm 20mm 12mm; padding: 3.5mm 4mm; border: 1px solid var(--line); text-align: center; color: var(--muted); font-size: 8.5pt; }
+
+/* ---------- 본문 공통 ---------- */
+.page-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1.6px solid var(--navy); padding-bottom: 2.2mm; margin-bottom: 5mm; }
+.page-head h2 { margin: 0; font-size: 15pt; font-weight: 700; color: var(--navy-deep); letter-spacing: 0.02em; }
+.page-head h2 span { font-family: 'Noto Serif KR', serif; color: var(--navy); margin-right: 2.5mm; }
+.page-head .meta { font-size: 8.5pt; color: var(--muted); text-align: right; line-height: 1.4; }
+.page-foot img { height: 5.5mm; width: auto; vertical-align: middle; margin-right: 2.5mm; opacity: 0.92; }
+.page-foot { position: absolute; left: 17mm; right: 17mm; bottom: 8mm; display: flex; justify-content: space-between; font-size: 7.8pt; color: var(--muted); border-top: 1px solid var(--line-soft); padding-top: 1.5mm; }
+
+h3.sec { font-size: 10.5pt; font-weight: 700; color: var(--navy-deep); margin: 4mm 0 1.8mm; padding-left: 2.2mm; border-left: 3px solid var(--navy); line-height: 1.2; }
+h3.sec small { font-weight: 400; color: var(--muted); font-size: 8pt; margin-left: 2mm; }
+
+/* KPI 타일 */
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3.5mm; }
+.kpi { border: 1px solid var(--line); border-top: 2.5px solid var(--navy); padding: 2.2mm 3.2mm 2mm; background: #fbfbfd; }
+.kpi .k { font-size: 8.5pt; color: var(--ink-2); font-weight: 600; }
+.kpi .k small { font-weight: 400; color: var(--muted); margin-left: 1.5mm; }
+.kpi .v { font-size: 14.5pt; font-weight: 700; color: var(--navy-deep); margin-top: 0.8mm; letter-spacing: -0.01em; }
+.kpi .v.neg { color: var(--warn); }
+.kpi .s { font-size: 8pt; color: var(--muted); margin-top: 0.6mm; display: flex; flex-direction: column; gap: 0.3mm; }
+.kpi .s b { font-weight: 600; color: var(--ink-2); }
+.up { color: var(--good) !important; } .down { color: var(--warn) !important; }
+
+/* 손익 요약표 */
+table.pl th, table.pl td { padding: 0.8mm 2mm; border-bottom: 1px solid var(--line-soft); font-size: 8.6pt; }
+table.pl th { background: #f1f4f9; color: var(--navy-deep); font-weight: 600; border-bottom: 1px solid var(--line); text-align: right; }
+table.pl th:first-child { text-align: left; }
+table.pl th small { display: block; font-weight: 400; color: var(--muted); font-size: 7.4pt; }
+table.pl td { text-align: right; font-variant-numeric: tabular-nums; }
+table.pl td:first-child { text-align: left; color: var(--ink-2); }
+table.pl td.sub { padding-left: 5mm; color: var(--muted); }
+table.pl tr.total td { font-weight: 700; color: var(--ink); background: #f8f9fc; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+table.pl tr.hl td { background: #eef3fb; }
+table.pl td.est { color: var(--navy-deep); font-weight: 600; }
+table.pl td.delta { color: var(--muted); font-size: 8.2pt; }
+table.pl td.neg { color: var(--warn); }
+.unit-note { text-align: right; font-size: 7.8pt; color: var(--muted); margin-bottom: 1mm; }
+
+/* 차트 */
+.chart-wrap { border: 1px solid var(--line); padding: 2mm 3mm 1.5mm; }
+.chart-wrap svg { width: 100%; height: auto; display: block; }
+.chart-legend { display: flex; gap: 5mm; font-size: 8pt; color: var(--ink-2); margin: 0 0 1mm 1mm; }
+.chart-legend i { display: inline-block; width: 3.2mm; height: 3.2mm; border-radius: 0.8mm; margin-right: 1.4mm; vertical-align: -0.4mm; }
+.chart-note { font-size: 7.8pt; color: var(--muted); margin-top: 1mm; }
+
+/* 비율 카드 */
+.ratios { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; }
+.ratio { border: 1px solid var(--line); padding: 2.2mm 2.8mm; }
+.ratio .k { font-size: 8.3pt; color: var(--ink-2); font-weight: 600; }
+.ratio .v { font-size: 14pt; font-weight: 700; color: var(--navy-deep); margin-top: 0.4mm; }
+.ratio .v.neg { color: var(--warn); }
+.ratio .t { font-size: 7.6pt; color: var(--muted); margin-top: 0.6mm; }
+.ratio .t b { color: var(--ink-2); font-weight: 600; }
+.ratio .d { font-size: 7.4pt; color: var(--muted); margin-top: 0.4mm; }
+
+/* 총평 */
+.summary { border: 1px solid var(--navy); background: #f4f6fb; padding: 3mm 4mm; margin-bottom: 3mm; }
+.summary .lbl { font-size: 8pt; letter-spacing: 0.2em; color: var(--navy); font-weight: 700; }
+.summary p { margin: 1mm 0 0; font-size: 10.5pt; font-weight: 600; color: var(--ink); line-height: 1.55; }
+
+/* 진단 포인트 */
+.points { list-style: none; margin: 0; padding: 0; }
+.points li { display: grid; grid-template-columns: 4.5mm 1fr; gap: 1.5mm; padding: 1.6mm 0; border-bottom: 1px dashed var(--line-soft); }
+.points li:last-child { border-bottom: 0; }
+.points .dot { width: 3.4mm; height: 3.4mm; border-radius: 50%; margin-top: 1.2mm; }
+.points .dot.good { background: var(--good); } .points .dot.warn { background: var(--warn); } .points .dot.info { background: var(--y2); }
+.points b { display: block; font-size: 9.3pt; color: var(--ink); margin-bottom: 0.3mm; }
+.points p { margin: 0; font-size: 8.9pt; color: var(--ink-2); line-height: 1.5; }
+
+/* 비용 구조·세액 표 */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+table.mini th, table.mini td { padding: 0.7mm 1.8mm; border-bottom: 1px solid var(--line-soft); font-size: 8.3pt; }
+table.mini th { background: #f1f4f9; color: var(--navy-deep); font-weight: 600; text-align: right; border-bottom: 1px solid var(--line); }
+table.mini th:first-child, table.mini td:first-child { text-align: left; }
+table.mini td { text-align: right; font-variant-numeric: tabular-nums; }
+table.mini tr.total td { font-weight: 700; border-top: 1px solid var(--line); background: #f8f9fc; }
+table.mini td.neg { color: var(--warn); }
+.checklist { margin: 0; padding-left: 5mm; font-size: 8.6pt; color: var(--ink-2); line-height: 1.5; }
+.checklist li { margin-bottom: 1.2mm; padding-left: 0.5mm; }
+.checklist li::marker { color: var(--navy); font-weight: 700; }
+.tax-note { font-size: 7.6pt; color: var(--muted); margin-top: 1.2mm; line-height: 1.45; }
+.disclaimer { margin-top: 4mm; padding: 2.2mm 3mm; background: #f7f7f7; border-left: 2px solid var(--line); font-size: 7.6pt; color: var(--muted); line-height: 1.45; }
+
+/* ---------- 인쇄 ---------- */
+@media print {
+  @page { size: A4 portrait; margin: 0; }
+  html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .no-print { display: none !important; }
+  .layout, .preview, main { display: block !important; padding: 0 !important; margin: 0 !important; min-height: 0 !important; overflow: visible !important; height: auto !important; }
+  #report { display: block !important; zoom: 1 !important; transform: none !important; margin: 0 !important; padding: 0 !important; gap: 0 !important; }
+  .page { box-shadow: none !important; margin: 0 !important; page-break-after: always; break-after: page; }
+  .page:last-child { page-break-after: auto; break-after: auto; }
+}
+
+/* 내용이 넘칠 때 자동으로 붙는 압축 모드 (app.js 가 판단) */
+.page.compact { font-size: 9pt; }
+.page.compact .points li { padding: 1.1mm 0; }
+.page.compact .points p { font-size: 8.4pt; line-height: 1.42; }
+.page.compact .points b { font-size: 8.8pt; }
+.page.compact .summary p { font-size: 9.8pt; }
+.page.compact .ratio .v { font-size: 12.5pt; }
+.page.compact h3.sec { margin: 3.5mm 0 1.5mm; }
+.page.compact .disclaimer { margin-top: 2.5mm; }

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>가결산 리포트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/report.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+<header class="topbar no-print">
+  <img class="brand-logo" src="assets/logo_h_white.png" alt="편한세무회계" onerror="this.remove()">
+  <div class="brand">가결산 리포트<small>손익계산서 PDF → 12개월 환산 · 3개년 추이 · 진단</small></div>
+  <div class="spacer"></div>
+  <span id="busy" class="busy" style="display:none"></span>
+  <button id="btnReset" class="btn ghost">처음부터</button>
+  <button id="btnPrint" class="btn primary" disabled>PDF 저장 / 인쇄</button>
+</header>
+
+<div class="layout">
+  <aside class="side no-print">
+    <h2><span class="step">1</span>손익계산서 PDF 올리기</h2>
+    <div id="drop" class="drop">
+      <b>여기를 클릭하거나 PDF를 끌어다 놓으세요</b>
+      <small>올해(가결산) · 작년 · 재작년 손익계산서를 한 번에 여러 개 올려도 됩니다.<br>비교식(당기·전기 2열) 양식이면 파일 하나로 2개년이 읽힙니다.</small>
+      <input id="fileInput" type="file" accept="application/pdf,.pdf" multiple hidden>
+    </div>
+    <ul id="files" class="files"></ul>
+    <div id="warnings" class="warnbox"></div>
+
+    <h2><span class="step">2</span>보고서 정보</h2>
+    <div class="field"><label for="title">보고서 제목</label><select id="title"></select></div>
+    <div class="field"><label for="company">회사명</label><input id="company" type="text" placeholder="PDF에서 자동으로 읽습니다"></div>
+    <div class="field"><label for="firm">세무사무소</label><input id="firm" type="text"></div>
+    <div class="field"><label for="preparer">담당자</label><input id="preparer" type="text" placeholder="(선택)"></div>
+    <div class="field"><label for="date">보고일</label><input id="date" type="date"></div>
+    <div class="field"><label for="unit">표 금액 단위</label><select id="unit"><option value="1">원</option><option value="1000">천원</option></select></div>
+
+    <h2><span class="step">3</span>예상 세금 설정</h2>
+    <div class="field"><label for="entity">사업자 구분</label><select id="entity"><option value="corp">법인 (법인세)</option><option value="indiv">개인 (종합소득세)</option></select></div>
+    <div class="field"><label for="credit">공제·감면율</label><div class="inline"><input id="credit" type="number" min="0" max="100" step="1" value="0" style="width:90px"> %</div></div>
+    <div class="field"><label for="loss">이월결손금</label><input id="loss" type="text" placeholder="0 (원)"></div>
+    <div class="field"><label>&nbsp;</label><label class="inline"><input id="showTax" type="checkbox" checked> 보고서에 예상 세금 표시</label></div>
+    <p class="hint">세율표는 js/config.js 에서 수정할 수 있습니다. 기본세율만 적용한 단순 추정입니다.</p>
+
+    <h2><span class="step">4</span>읽어낸 숫자 확인 <button id="btnAddYear" class="btn small" style="float:right">연도 직접 추가</button></h2>
+    <div id="datatbl"></div>
+    <div id="details"></div>
+    <p class="hint">숫자를 고치면 보고서가 바로 다시 계산됩니다. 노란색 칸은 손으로 고친 값입니다. 구성 항목을 고치면 매출총이익·영업이익·세전이익·당기순이익은 자동으로 다시 계산됩니다.</p>
+  </aside>
+
+  <main class="preview">
+    <div class="tools no-print">미리보기 — 실제 출력은 A4 3장입니다. <b>PDF 저장</b> 버튼 → 인쇄 대상에서 <b>"PDF로 저장"</b>을 고르세요. (여백: 없음, 배경 그래픽: 켜기)</div>
+    <div id="report"></div>
+  </main>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/parser.js"></script>
+<script src="js/analysis.js"></script>
+<script src="js/report.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
