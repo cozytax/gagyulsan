@@ -13,6 +13,7 @@
     analysis: null,
     years: [],
     warnings: [],
+    extras: [{ label: '', amount: 0 }, { label: '', amount: 0 }, { label: '', amount: 0 }], // 추가 비용 시뮬레이션
   };
 
   /* ---------- 유틸 ---------- */
@@ -83,6 +84,7 @@
       entityType: $('entity').value,
       ...readCredit(),
       lossCarry: parseInt(String($('loss').value).replace(/[^\d-]/g, ''), 10) || 0,
+      extras: state.extras.filter(e => e.amount > 0),
     });
     renderAll();
   }
@@ -179,7 +181,25 @@
     if (overflow()) console.warn('A4 한 장을 넘치는 페이지가 있습니다.');
   }
 
-  function renderAll() { renderFiles(); renderData(); renderWarnings(); renderReport(); }
+  function renderAll() { renderFiles(); renderData(); renderWarnings(); renderExtras(); renderReport(); }
+
+  /* ---------- 추가 비용 시뮬레이션 ---------- */
+  function renderExtras() {
+    const tbl = $('extras');
+    const rows = state.extras.map((e, i) => `<tr><td><input class="lbl" data-i="${i}" data-f="label" value="${e.label.replace(/"/g, '&quot;')}" placeholder="예: 대표 급여 추가"></td><td><input class="amt" data-i="${i}" data-f="amount" value="${e.amount ? e.amount.toLocaleString('ko-KR') : ''}" placeholder="0"></td><td><button class="x" data-i="${i}" title="삭제">×</button></td></tr>`).join('');
+    tbl.innerHTML = `<thead><tr><th>항목</th><th>금액(원)</th><th></th></tr></thead><tbody>${rows}</tbody>`;
+    tbl.querySelectorAll('input').forEach(inp => inp.onchange = () => {
+      const e = state.extras[+inp.dataset.i];
+      if (inp.dataset.f === 'label') e.label = inp.value.trim();
+      else { e.amount = parseInt(String(inp.value).replace(/[^\d]/g, ''), 10) || 0; inp.value = e.amount ? e.amount.toLocaleString('ko-KR') : ''; }
+      recompute();
+    });
+    tbl.querySelectorAll('button.x').forEach(b => b.onclick = () => { state.extras.splice(+b.dataset.i, 1); if (!state.extras.length) state.extras.push({ label: '', amount: 0 }); recompute(); });
+    const total = state.extras.reduce((s, e) => s + (e.amount || 0), 0);
+    $('extraTotal').textContent = total.toLocaleString('ko-KR');
+    const saved = state.analysis && state.analysis.tax.extra ? state.analysis.tax.extra.saved : 0;
+    $('extraSaved').textContent = Math.round(saved).toLocaleString('ko-KR');
+  }
 
   /* ---------- 공제·감면 선택 ---------- */
   function creditDef() { return C.creditTypes.find(t => t.key === $('creditType').value) || C.creditTypes[0]; }
@@ -260,7 +280,9 @@
       state.manual[yr] = { m: { sales: 0, cogs: 0, sga: 0, nonOpInc: 0, nonOpExp: 0, tax: 0 }, months: 12 };
       recompute(); toast(`${yr}년 열을 추가했습니다. 아래 표에 금액을 입력하세요.`);
     };
-    $('btnReset').onclick = () => { if (!confirm('올린 파일과 수정한 값을 모두 지울까요?')) return; state.files = []; state.manual = {}; state.edits = {}; state._entitySet = false; $('company').value = ''; $('entity').value = C.defaultEntity || 'indiv'; recompute(); };
+    $('btnAddExtra').onclick = () => { state.extras.push({ label: '', amount: 0 }); renderExtras(); tbl_focusLast(); };
+    const tbl_focusLast = () => { const ins = $('extras').querySelectorAll('input.lbl'); if (ins.length) ins[ins.length - 1].focus(); };
+    $('btnReset').onclick = () => { if (!confirm('올린 파일과 수정한 값을 모두 지울까요?')) return; state.files = []; state.manual = {}; state.edits = {}; state._entitySet = false; state.extras = [{ label: '', amount: 0 }, { label: '', amount: 0 }, { label: '', amount: 0 }]; $('company').value = ''; $('entity').value = C.defaultEntity || 'indiv'; recompute(); };
 
     renderAll();
     const q = new URLSearchParams(location.search).get('load');

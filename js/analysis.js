@@ -177,7 +177,19 @@
       const parts = []; if (credit > 0) parts.push(`${credit * 100}%`); if (creditFixed > 0) parts.push(`${Fmt.won(creditFixed)}원`);
       if (parts.length) creditLabel += ` (${parts.join(' + ')})`;
     }
-    return { entity, creditType: opts.creditType || 'none', creditRate: credit * 100, creditAmount: creditFixed, creditLabel, hasCredit, loss, actual: calc(b.m.pretax), annual: calc(b.a.pretax) };
+    const annual = calc(b.a.pretax), actual = calc(b.m.pretax);
+    // 추가 비용 시뮬레이션: 연환산 세전이익에서 추가 비용을 뺀 뒤 다시 계산
+    const extras = (opts.extras || []).filter(e => e && e.amount > 0);
+    const extraTotal = extras.reduce((s, e) => s + e.amount, 0);
+    let extra = null;
+    if (extraTotal > 0) {
+      const after = calc(b.a.pretax - extraTotal);
+      const afterActual = calc(b.m.pretax - extraTotal);
+      const saved = annual.total - after.total;
+      extra = { items: extras, total: extraTotal, after, afterActual, saved, savedActual: actual.total - afterActual.total,
+        marginal: extraTotal > 0 ? saved / extraTotal * 100 : 0, netCost: extraTotal - saved, pretaxAfter: b.a.pretax - extraTotal };
+    }
+    return { entity, creditType: opts.creditType || 'none', creditRate: credit * 100, creditAmount: creditFixed, creditLabel, hasCredit, loss, actual, annual, extra };
   }
 
   /* ---------- 진단 문구 (규칙 기반) ---------- */
@@ -269,6 +281,17 @@
       } else {
         push('info', '순손실 예상', `올해 ${estWord}당기순손실은 ${Fmt.man(Math.abs(net))}입니다. 올해 세금은 거의 없을 것으로 보이며, 결손금은 이후 연도 이익에서 공제(이월결손금)할 수 있으니 신고를 빠뜨리지 않는 것이 중요합니다.`);
       }
+    }
+
+    // 6-1. 추가 비용 시뮬레이션
+    if (tax.extra) {
+      const x = tax.extra; const nm = tax.entity === 'indiv' ? '종합소득세' : '법인세';
+      const list = x.items.filter(it => it.label).map(it => `${it.label} ${Fmt.man(it.amount)}`).join(', ');
+      let s = `${list ? list + ' 등 ' : ''}비용 ${Fmt.man(x.total)}을 올해 안에 추가로 반영하면 ${estWord}${nm}(지방소득세 포함)는 ${Fmt.man(tax.annual.total)}에서 ${Fmt.man(x.after.total)}으로 약 ${Fmt.man(x.saved)} 줄어듭니다.`;
+      if (x.saved > 0) s += ` 지출 100원당 세금이 약 ${x.marginal.toFixed(0)}원 줄어드는 셈이며, 세금을 뺀 실제 부담은 ${Fmt.man(x.netCost)}입니다.`;
+      else s += ' 이미 납부할 세금이 거의 없어 추가 비용으로 줄어드는 세금은 없습니다.';
+      s += ' 추가 비용은 실제 지출과 증빙이 있어야 인정됩니다.';
+      push(x.saved > 0 ? 'good' : 'info', '추가 비용 반영 시 세금 변화', s);
     }
 
     // 7. 환산 주의

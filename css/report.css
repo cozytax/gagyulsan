@@ -127,6 +127,13 @@ table.mini td.neg { color: var(--warn); }
 .checklist { margin: 0; padding-left: 5mm; font-size: 8.6pt; color: var(--ink-2); line-height: 1.5; }
 .checklist li { margin-bottom: 1.2mm; padding-left: 0.5mm; }
 .checklist li::marker { color: var(--navy); font-weight: 700; }
+.saving { margin-top: 2.5mm; border: 1.2px solid var(--good); background: #f1f8f4; padding: 2.2mm 3mm; }
+.saving .lbl { font-size: 7.8pt; letter-spacing: 0.2em; color: var(--good); font-weight: 700; }
+.saving .big { font-size: 15pt; font-weight: 700; color: var(--good); line-height: 1.25; margin-top: 0.5mm; }
+.saving .big small { font-size: 9pt; font-weight: 600; margin-left: 1mm; }
+.saving .sub { font-size: 7.8pt; color: var(--ink-2); margin-top: 0.8mm; line-height: 1.45; }
+.saving .items { margin: 1.2mm 0 0; padding-left: 4mm; font-size: 7.8pt; color: var(--ink-2); columns: 2; }
+.saving .items li { margin-bottom: 0.3mm; break-inside: avoid; }
 .tax-note { font-size: 7.6pt; color: var(--muted); margin-top: 1.2mm; line-height: 1.45; }
 .disclaimer { margin-top: 4mm; padding: 2.2mm 3mm; background: #f7f7f7; border-left: 2px solid var(--line); font-size: 7.6pt; color: var(--muted); line-height: 1.45; }
 

@@ -52,6 +52,13 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
 .datatbl input.edited { background: #fff8e6; border-color: #e3a52b; }
 .datatbl tr.total td { font-weight: 700; background: #f8f9fc; }
 .datatbl td.lbl.sub { padding-left: 14px; color: #7b8494; }
+table.extras td:first-child { width: 55%; }
+table.extras input.lbl { width: 100%; text-align: left; }
+table.extras input.amt { width: 120px; }
+table.extras .x { border: 0; background: none; cursor: pointer; color: #7b8494; font-size: 15px; }
+.extra-total { font-size: 12.5px; color: #4b5563; margin: 8px 0 2px; text-align: right; }
+.extra-total b { color: #1d2433; }
+.extra-total b.up { color: #1f7a4d; }
 details.detail-box { margin-top: 6px; }
 details.detail-box summary { cursor: pointer; font-size: 12.5px; color: #1f3a63; font-weight: 600; }
 .detail-list { font-size: 11.5px; color: #4b5563; max-height: 220px; overflow: auto; border: 1px solid #e8ecf1; padding: 6px 8px; margin-top: 6px; }

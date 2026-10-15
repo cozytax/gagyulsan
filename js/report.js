@@ -177,6 +177,7 @@
   function taxTable(analysis, unit) {
     const t = analysis.tax; const b = analysis.base; const est = b.factor !== 1;
     const nm = t.entity === 'indiv' ? '종합소득세' : '법인세';
+    if (t.extra) return taxCompareTable(analysis, unit, nm);
     const r = (label, k, cls) => `<tr class="${cls || ''}"><td>${label}</td><td>${Fmt.wonUnit(t.actual[k], unit)}</td>${est ? `<td>${Fmt.wonUnit(t.annual[k], unit)}</td>` : ''}</tr>`;
     return `<table class="mini"><thead><tr><th>구분</th><th>${b.months}개월 실적 기준</th>${est ? '<th>12개월 환산 기준</th>' : ''}</tr></thead><tbody>
 <tr><td>세전이익</td><td class="${b.m.pretax < 0 ? 'neg' : ''}">${Fmt.wonUnit(b.m.pretax, unit)}</td>${est ? `<td class="${b.a.pretax < 0 ? 'neg' : ''}">${Fmt.wonUnit(b.a.pretax, unit)}</td>` : ''}</tr>
@@ -187,6 +188,25 @@ ${r('지방소득세 (10%)', 'local')}
 ${r('예상 세금 합계', 'total', 'total')}
 </tbody></table>
 <p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) ${nm} 기본세율만 적용한 단순 추정입니다. ${t.entity === 'indiv' ? '소득공제는 본인 기본공제만 반영했고, ' : ''}세무조정(접대비 한도·감가상각 등), ${t.hasCredit ? '선택한 항목 외의 공제·감면과 최저한세, ' : '각종 공제·감면, '}중간예납 기납부세액은 반영하지 않았습니다.</p>`;
+  }
+
+  /* 추가 비용 반영 전/후 비교표 */
+  function taxCompareTable(analysis, unit, nm) {
+    const t = analysis.tax; const x = t.extra; const b = analysis.base; const est = b.factor !== 1;
+    const A = t.annual, B = x.after;
+    const diff = (a, c, color) => { const d = c - a; return `<td class="${color ? (d < 0 ? 'up' : d > 0 ? 'down' : '') : ''}">${d === 0 ? '-' : (d > 0 ? '+' : '−') + Fmt.wonUnit(Math.abs(d), unit)}</td>`; };
+    const r = (label, a, c, cls, color) => `<tr class="${cls || ''}"><td>${label}</td><td class="${a < 0 ? 'neg' : ''}">${Fmt.wonUnit(a, unit)}</td><td class="${c < 0 ? 'neg' : ''}">${Fmt.wonUnit(c, unit)}</td>${diff(a, c, color !== false)}</tr>`;
+    const items = x.items.map(it => `<li>${esc(it.label || '추가 비용')} <b>${Fmt.wonUnit(it.amount, unit)}</b></li>`).join('');
+    return `<table class="mini"><thead><tr><th>구분${est ? '<small> (12개월 환산 기준)</small>' : ''}</th><th>반영 전</th><th>반영 후</th><th>차이</th></tr></thead><tbody>
+${r('세전이익', b.a.pretax, x.pretaxAfter, '', false)}
+<tr><td>(−) 추가 비용</td><td>-</td><td>${Fmt.wonUnit(x.total, unit)}</td><td></td></tr>
+${r(`${nm} 산출세액`, A.computed, B.computed)}
+${t.hasCredit ? r(`(−) ${t.creditLabel}`, A.creditAmt, B.creditAmt) : ''}
+${r('지방소득세 (10%)', A.local, B.local)}
+${r('예상 세금 합계', A.total, B.total, 'total')}
+</tbody></table>
+<div class="saving"><div class="lbl">절세 효과</div><div class="big">${Fmt.man(x.saved)} <small>감소</small></div><div class="sub">추가 비용 ${Fmt.man(x.total)} 반영 시 · 지출 100원당 세금 약 ${x.marginal.toFixed(0)}원 감소 · 세금 차감 후 실제 부담 ${Fmt.man(x.netCost)}</div><ul class="items">${items}</ul></div>
+<p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) ${nm} 기본세율만 적용한 단순 추정입니다. 추가 비용은 실제 지출·증빙이 있어야 비용으로 인정되며, 세무조정·최저한세·중간예납 기납부세액은 반영하지 않았습니다.</p>`;
   }
 
   function page3(model) {
