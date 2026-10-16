@@ -63,8 +63,8 @@
     const byYear = {}; const warnings = [];
     for (const s of statements) {
       for (const per of s.periods) {
-        if (!per.year) { warnings.push(`${s.fileName}: 회계기간을 읽지 못해 건너뛰었습니다.`); continue; }
-        if (per.items.every(it => !it.value)) { warnings.push(`${s.fileName}: ${per.year}년(${per.kind === 'prev' ? '전기' : '당기'}) 열이 전부 0이라 제외했습니다.`); continue; }
+        if (per.items.every(it => !it.value)) { if (per.year) warnings.push(`${s.fileName}: ${per.year}년(${per.kind === 'prev' ? '전기' : '당기'}) 열이 전부 0이라 제외했습니다.`); continue; }
+        if (!per.year) { warnings.push(`${s.fileName}: ${per.kind === 'prev' ? '전기' : '당기'} 열의 회계기간을 읽지 못해 건너뛰었습니다.`); continue; }
         const y = periodToYear(s, per);
         const ex = byYear[per.year];
         if (!ex) { byYear[per.year] = y; continue; }
@@ -114,7 +114,7 @@
 
     const rows = years.map((y, i) => {
       const isBase = y === base;
-      const f = isBase ? factor : 1;
+      const f = (y.months > 0 && y.months < 12) ? 12 / y.months : 1;
       const a = {}; for (const k of MAJOR_KEYS) a[k] = y.m[k] * f;
       const r = {
         grossMargin: ratio(a.gross, a.sales), opMargin: ratio(a.op, a.sales), netMargin: ratio(a.net, a.sales),
@@ -139,6 +139,7 @@
     const map = {};
     const add = (list, who) => list.forEach(it => { const k = it.label; if (!map[k]) map[k] = { label: k, cur: 0, prev: 0 }; map[k][who] += it.value; });
     add(b.details.sga, 'cur'); if (p) add(p.details.sga, 'prev');
+    if (p && p.factor !== 1) Object.values(map).forEach(it => { it.prev *= p.factor; });
     const items = Object.values(map).map(it => ({
       ...it, curA: it.cur * b.factor,
       share: ratio(it.cur * b.factor, b.a.sales),

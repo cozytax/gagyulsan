@@ -49,7 +49,7 @@
     const unit = options.unit || 1;
     const prevRows = rows.slice(0, -1);
     const head = ['<th>항목</th>']
-      .concat(prevRows.map(y => `<th>${y.year}년<small>${y.months < 12 ? `${y.months}개월` : '결산'}</small></th>`))
+      .concat(prevRows.map(y => `<th>${y.year}년<small>${y.months < 12 ? `${y.months}개월 실적` : '결산'}</small></th>`))
       .concat([`<th>${b.year}년 실적<small>${b.startMonth || 1}~${b.endMonth || 12}월 (${b.months}개월)</small></th>`])
       .concat(est ? [`<th>${b.year}년 연환산<small>12개월 추정</small></th>`] : [])
       .concat(analysis.prev ? [`<th>전년 대비<small>${est ? '연환산' : '실적'} 기준</small></th>`] : [])
@@ -65,14 +65,15 @@
       if (k === 'tax') label = analysis.tax.entity === 'indiv' ? '소득세등' : '법인세등';
       if (k === 'pretax') label = analysis.tax.entity === 'indiv' ? '소득세차감전이익' : '법인세차감전이익';
       const g = analysis.prev ? (b.g[k] !== undefined ? b.g[k] : ((analysis.prev.a[k]) ? (b.a[k] - analysis.prev.a[k]) / Math.abs(analysis.prev.a[k]) * 100 : null)) : null;
-      const isCost = ['cogs', 'sga', 'nonOpExp', 'tax'].includes(k);
-      const gCls = g === null ? '' : (g > 0) !== isCost ? 'up' : (g < 0) !== isCost ? 'down' : '';
+      const gCls = g === null ? '' : g > 0 ? 'up' : g < 0 ? 'down' : '';
       return `<tr class="${cls}"><td class="${isTotal ? '' : 'sub'}">${label}</td>` +
         prevRows.map(y => cell(y.m[k])).join('') + cell(b.m[k]) +
         (est ? cell(b.a[k], 'est') : '') +
         (analysis.prev ? `<td class="delta ${g ? gCls : ''}">${Fmt.delta(g)}</td>` : '') + '</tr>';
     }).join('');
-    return `<div class="unit-note">(단위: ${unit === 1000 ? '천원' : '원'})</div><table class="pl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+    const partialPrev = prevRows.filter(y => y.factor !== 1);
+    const foot = partialPrev.length ? `<div class="unit-note" style="text-align:left;margin-top:1mm">※ ${partialPrev.map(y => `${y.year}년은 ${y.months}개월 실적`).join(', ')}이므로 전년 대비는 양쪽 모두 12개월로 환산해 비교했습니다.</div>` : '';
+    return `<div class="unit-note">(단위: ${unit === 1000 ? '천원' : '원'})</div><table class="pl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>${foot}`;
   }
 
   /* 추이 차트: 항목별 그룹, 연도별 막대 */
@@ -111,19 +112,21 @@
           const top = Math.min(yOf(v0), yOf(v1)), h = Math.abs(yOf(v0) - yOf(v1));
           return h > 0.3 ? `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${fill}" opacity="${op}"/>` : '';
         };
+        const partial = y.factor !== 1;
         svg += rect(0, actual, colors[yi], 1);
-        if (y.isBase && est) svg += rect(actual, annual, 'var(--y3e)', 1);
-        const labelV = (y.isBase && est) ? annual : actual;
+        if (partial) svg += rect(actual, annual, 'var(--y3e)', 1);
+        const labelV = partial ? annual : actual;
         const ly = labelV >= 0 ? yOf(labelV) - 5 : yOf(labelV) + 12;
         svg += `<text x="${(x + barW / 2).toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-size="10.5" fill="#1d2433" font-weight="${y.isBase ? 700 : 500}">${short(labelV)}</text>`;
       });
       svg += `<text x="${(padL + gi * groupW + groupW / 2).toFixed(1)}" y="${H - 10}" text-anchor="middle" font-size="12" font-weight="600" fill="#4b5563">${label}</text>`;
     });
-    const legend = rows.map((y, i) => `<span><i style="background:${colors[i]}"></i>${y.year}년${y.isBase && est ? ' 실적' : ''}</span>`).join('') +
-      (est ? `<span><i style="background:var(--y3e)"></i>${b.year}년 연환산 추정분</span>` : '');
+    const anyPartial = rows.some(y => y.factor !== 1);
+    const legend = rows.map((y, i) => `<span><i style="background:${colors[i]}"></i>${y.year}년${y.factor !== 1 ? ` 실적(${y.months}개월)` : ''}</span>`).join('') +
+      (anyPartial ? `<span><i style="background:var(--y3e)"></i>12개월 환산 추정분</span>` : '');
     return `<div class="chart-wrap"><div class="chart-legend">${legend}</div>
 <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="매출·영업이익·당기순이익 연도별 추이">${svg}</svg>
-<div class="chart-note">막대 위 숫자는 금액(만원·억원). ${est ? `${b.year}년은 ${b.months}개월 실적(진한 색) 위에 12개월 환산 추정분(연한 색)을 덧붙여 표시했습니다.` : ''} 손실은 기준선 아래로 표시됩니다.</div></div>`;
+<div class="chart-note">막대 위 숫자는 금액(만원·억원). ${anyPartial ? `12개월 미만 연도는 실적(진한 색) 위에 12개월 환산 추정분(연한 색)을 덧붙여 표시했습니다.` : ''} 손실은 기준선 아래로 표시됩니다.</div></div>`;
   }
 
   function page2(model) {
@@ -152,7 +155,7 @@
     const rows = analysis.rows; const b = analysis.base; const p = analysis.prev; const pp = rows.length >= 3 ? rows[rows.length - 3] : null;
     const v = b.r[key]; const pv = p ? p.r[key] : null;
     const d = (v !== null && pv !== null) ? v - pv : null;
-    const good = d === null ? null : (Math.abs(d) < 0.05 ? null : (invert ? d < 0 : d > 0));
+    const good = d === null ? null : (Math.abs(d) < 0.05 ? null : d > 0);
     return `<div class="ratio">
   <div class="k">${label}</div>
   <div class="v${v !== null && v < 0 ? ' neg' : ''}">${Fmt.pct(v)}</div>
@@ -166,11 +169,11 @@
     if (!c.hasDetail) return `<p class="tax-note">판관비 세부 항목을 PDF에서 읽지 못해 비용 구조 표를 생략했습니다.</p>`;
     const items = c.items.filter(it => it.curA > 0 || it.prev > 0).slice(0, 5);
     const sgaA = b.a.sga, sgaP = analysis.prev ? analysis.prev.a.sga : null;
-    const rows = items.map(it => `<tr><td>${esc(it.label)}</td><td>${Fmt.wonUnit(it.curA, unit)}</td>${analysis.prev ? `<td>${Fmt.wonUnit(it.prev, unit)}</td>` : ''}<td>${Fmt.pct(it.share)}</td>${analysis.prev ? `<td class="${it.change > 0 ? 'down' : it.change < 0 ? 'up' : ''}">${Fmt.delta(it.change)}</td>` : ''}</tr>`).join('');
+    const rows = items.map(it => `<tr><td>${esc(it.label)}</td><td>${Fmt.wonUnit(it.curA, unit)}</td>${analysis.prev ? `<td>${Fmt.wonUnit(it.prev, unit)}</td>` : ''}<td>${Fmt.pct(it.share)}</td>${analysis.prev ? `<td class="${it.change > 0 ? 'up' : it.change < 0 ? 'down' : ''}">${Fmt.delta(it.change)}</td>` : ''}</tr>`).join('');
     const etc = sgaA - items.reduce((s, it) => s + it.curA, 0);
     return `<table class="mini"><thead><tr><th>판관비 항목</th><th>${b.year}년${est ? '(환산)' : ''}</th>${analysis.prev ? `<th>${analysis.prev.year}년</th>` : ''}<th>매출比</th>${analysis.prev ? '<th>증감</th>' : ''}</tr></thead>
 <tbody>${rows}${etc > 0.5 ? `<tr><td>기타</td><td>${Fmt.wonUnit(etc, unit)}</td>${analysis.prev ? '<td>-</td>' : ''}<td>${Fmt.pct(etc / Math.abs(b.a.sales || 1) * 100)}</td>${analysis.prev ? '<td>-</td>' : ''}</tr>` : ''}
-<tr class="total"><td>판관비 합계</td><td>${Fmt.wonUnit(sgaA, unit)}</td>${analysis.prev ? `<td>${Fmt.wonUnit(sgaP, unit)}</td>` : ''}<td>${Fmt.pct(b.r.sgaRatio)}</td>${analysis.prev ? `<td class="${b.g.sga > 0 ? 'down' : b.g.sga < 0 ? 'up' : ''}">${Fmt.delta(b.g.sga)}</td>` : ''}</tr></tbody></table>
+<tr class="total"><td>판관비 합계</td><td>${Fmt.wonUnit(sgaA, unit)}</td>${analysis.prev ? `<td>${Fmt.wonUnit(sgaP, unit)}</td>` : ''}<td>${Fmt.pct(b.r.sgaRatio)}</td>${analysis.prev ? `<td class="${b.g.sga > 0 ? 'up' : b.g.sga < 0 ? 'down' : ''}">${Fmt.delta(b.g.sga)}</td>` : ''}</tr></tbody></table>
 <p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) 매출比 = 항목 금액 ÷ 매출액. ${c.labor.cur > 0 ? `인건비 합계(급여·상여 등) ${Fmt.man(c.labor.cur)}, 매출의 ${Fmt.pct(c.labor.share)}.` : ''}</p>`;
   }
 
@@ -194,7 +197,7 @@ ${r('예상 세금 합계', 'total', 'total')}
   function taxCompareTable(analysis, unit, nm) {
     const t = analysis.tax; const x = t.extra; const b = analysis.base; const est = b.factor !== 1;
     const A = t.annual, B = x.after;
-    const diff = (a, c, color) => { const d = c - a; return `<td class="${color ? (d < 0 ? 'up' : d > 0 ? 'down' : '') : ''}">${d === 0 ? '-' : (d > 0 ? '+' : '−') + Fmt.wonUnit(Math.abs(d), unit)}</td>`; };
+    const diff = (a, c, color) => { const d = c - a; return `<td class="${color ? (d < 0 ? 'down' : d > 0 ? 'up' : '') : ''}">${d === 0 ? '-' : (d > 0 ? '+' : '−') + Fmt.wonUnit(Math.abs(d), unit)}</td>`; };
     const r = (label, a, c, cls, color) => `<tr class="${cls || ''}"><td>${label}</td><td class="${a < 0 ? 'neg' : ''}">${Fmt.wonUnit(a, unit)}</td><td class="${c < 0 ? 'neg' : ''}">${Fmt.wonUnit(c, unit)}</td>${diff(a, c, color !== false)}</tr>`;
     const items = x.items.map(it => `<li>${esc(it.label || '추가 비용')} <b>${Fmt.wonUnit(it.amount, unit)}</b></li>`).join('');
     return `<table class="mini"><thead><tr><th>구분${est ? '<small> (12개월 환산 기준)</small>' : ''}</th><th>반영 전</th><th>반영 후</th><th>차이</th></tr></thead><tbody>

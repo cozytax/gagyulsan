@@ -68,7 +68,7 @@ h3.sec small { font-weight: 400; color: var(--muted); font-size: 8pt; margin-lef
 .kpi .v.neg { color: var(--warn); }
 .kpi .s { font-size: 8pt; color: var(--muted); margin-top: 0.6mm; display: flex; flex-direction: column; gap: 0.3mm; }
 .kpi .s b { font-weight: 600; color: var(--ink-2); }
-.up { color: var(--good) !important; } .down { color: var(--warn) !important; }
+.up { color: #c0392b !important; } .down { color: #1f5fbf !important; }   /* 증가 빨강 · 감소 파랑 */
 
 /* 손익 요약표 */
 table.pl th, table.pl td { padding: 0.8mm 2mm; border-bottom: 1px solid var(--line-soft); font-size: 8.6pt; }

@@ -122,7 +122,7 @@
 
     const periods = parsePeriods(fullText);
     const company = parseCompany(fullText);
-    const hasPrev = !!periods.prev;
+    let hasPrev = !!periods.prev;
 
     // 열 기준점: "(당)기" "(전)기" 헤더 x 중심
     let curCenter = null, prevCenter = null;
@@ -140,10 +140,25 @@
         if (curCenter !== null && prevCenter !== null) break;
       }
     }
+    // '금 액' 머리글 위치로 금액 열(당기/전기)을 잡는다 — 신설 1기처럼 '(전)기' 머리글 없이 전기 열이 0으로 찍힌 양식 대응
+    const amountCols = [];
+    for (const l of allLines) {
+      const txt = lineText(l).replace(/\s+/g, '');
+      if (!/^(금액(비율\(%\))?){1,3}$/.test(txt)) continue;
+      let start = null;
+      for (const t of l.toks) {
+        const st = t.str.replace(/\s+/g, '');
+        if (st.startsWith('금')) start = t.x;
+        if (st.endsWith('액') && start !== null) { amountCols.push({ x0: start, x1: t.x + t.w, c: (start + t.x + t.w) / 2 }); start = null; }
+      }
+      if (amountCols.length) break;
+    }
+    const colByHeader = amountCols.length >= 2;
+    if (colByHeader) hasPrev = true;           // 금액 열이 둘이면 전기 열이 있는 양식 (기간 문구가 없어도)
     // 헤더를 못 찾으면 숫자 위치로 추정(오른쪽 절반 = 전기)
     const splitByNearest = (curCenter !== null && prevCenter !== null);
     let pageMidX = null;
-    if (!splitByNearest && hasPrev) {
+    if (!colByHeader && !splitByNearest && hasPrev) {
       const xs = [];
       for (const l of allLines) for (const t of l.toks) if (NUM_RE.test(t.str)) xs.push(t.x + t.w);
       if (xs.length) { xs.sort((a, b) => a - b); pageMidX = (xs[0] + xs[xs.length - 1]) / 2; }
@@ -177,7 +192,8 @@
         const cx = t.x + t.w / 2;
         let isPrev = false;
         if (hasPrev) {
-          if (splitByNearest) isPrev = Math.abs(cx - prevCenter) < Math.abs(cx - curCenter);
+          if (colByHeader) { let best = 0; amountCols.forEach((c, i) => { if (Math.abs(cx - c.c) < Math.abs(cx - amountCols[best].c)) best = i; }); isPrev = best >= 1; }
+          else if (splitByNearest) isPrev = Math.abs(cx - prevCenter) < Math.abs(cx - curCenter);
           else if (pageMidX !== null) isPrev = cx > pageMidX;
         }
         if (isPrev) prev = v; else cur = v;  // 같은 열에 둘이면 오른쪽(합계) 우선
