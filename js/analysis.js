@@ -184,7 +184,7 @@
     const extras = (opts.extras || []).filter(e => e && e.amount > 0);
     const extraTotal = extras.reduce((s, e) => s + e.amount, 0);
     let extra = null;
-    if (extraTotal > 0) {
+    if (extraTotal > 0 && annual.total > 0) {   // 결손 등으로 낼 세금이 없으면 시뮬레이션 생략
       const after = calc(b.a.pretax - extraTotal);
       const afterActual = calc(b.m.pretax - extraTotal);
       const saved = annual.total - after.total;
@@ -257,7 +257,7 @@
         else s += ` 공제·감면 적용 후 ${nm}는 거의 없을 것으로 보입니다.`;
         push('info', '예상 순이익과 세금', s);
       } else {
-        push('info', '순손실 예상', `올해 순손실 ${Fmt.man(Math.abs(net))}. 올해 세금은 거의 없고, 손실은 다음 해 이익에서 공제됩니다.`);
+        push('info', '순손실 예상', `올해 순손실 ${Fmt.man(Math.abs(net))}` + (b.r.netMargin !== null ? `(매출 대비 ${Fmt.pct(Math.abs(b.r.netMargin))})` : '') + '. 손실은 다음 해 이익에서 공제됩니다.');
       }
     }
 
@@ -283,13 +283,19 @@
   /* 확인 요청 사항 — 사무실에서 처리하는 결산·세무조정 업무는 넣지 않는다 */
   function buildChecklist(rows, cost, tax, est) {
     const b = rows[rows.length - 1];
+    const loss = b.a.pretax <= 0;
     const list = [];
     list.push('아직 전달하지 않은 세금계산서·카드·현금영수증 등 증빙이 있으면 보내주세요.');
+    if (loss) {
+      // 결손: 세금·공제·절세 이야기는 넣지 않는다
+      if (cost.hasDetail && cost.labor.cur === 0) list.push('급여 지급이 있었다면 내역을 알려주세요.');
+      list.push('매출·매입 자료는 결산 전까지 제때 전달해 주세요. 올해 손실은 다음 해 이익에서 공제받도록 저희가 신고합니다.');
+      return list.slice(0, 4);
+    }
     if (cost.hasDetail && cost.labor.cur === 0) list.push(tax.entity === 'corp' ? '대표이사 급여를 어떻게 책정할지 정해 주세요. 급여 반영 여부에 따라 세금이 달라집니다.' : '급여 지급이 있었다면 내역을 알려주세요.');
     else list.push('직원 채용·급여 변경 계획이 있으면 알려주세요. 고용 관련 공제를 검토합니다.');
     list.push('연말까지 예정된 큰 지출(비품·차량·퇴직연금 등)이 있으면 미리 알려주세요. 절세 효과를 계산해 드립니다.');
-    if (b.a.pretax > 0 && tax.annual.total > 0) list.push(`${est ? '내년 신고 때' : '신고 때'} 납부할 세금(예상 ${Fmt.man(tax.annual.total)})을 미리 준비해 두세요.`);
-    else if (b.a.pretax <= 0) list.push('올해는 손실이라 세금 부담은 거의 없습니다. 손실을 다음 해에 공제받도록 저희가 신고합니다.');
+    if (tax.annual.total > 0) list.push(`${est ? '내년 신고 때' : '신고 때'} 납부할 세금(예상 ${Fmt.man(tax.annual.total)})을 미리 준비해 두세요.`);
     return list.slice(0, 4);
   }
 

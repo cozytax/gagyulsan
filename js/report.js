@@ -181,6 +181,16 @@
     const t = analysis.tax; const b = analysis.base; const est = b.factor !== 1;
     const nm = t.entity === 'indiv' ? '종합소득세' : '법인세';
     if (t.extra) return taxCompareTable(analysis, unit, nm);
+    const noTax = t.actual.computed <= 0 && t.annual.computed <= 0;   // 결손 등: 공제·감면 행과 안내 생략
+    if (noTax) {
+      const r0 = (label, k, cls) => `<tr class="${cls || ''}"><td>${label}</td><td>${Fmt.wonUnit(t.actual[k], unit)}</td>${est ? `<td>${Fmt.wonUnit(t.annual[k], unit)}</td>` : ''}</tr>`;
+      return `<table class="mini"><thead><tr><th>구분</th><th>${b.months}개월 실적 기준</th>${est ? '<th>12개월 환산 기준</th>' : ''}</tr></thead><tbody>
+<tr><td>세전이익</td><td class="${b.m.pretax < 0 ? 'neg' : ''}">${Fmt.wonUnit(b.m.pretax, unit)}</td>${est ? `<td class="${b.a.pretax < 0 ? 'neg' : ''}">${Fmt.wonUnit(b.a.pretax, unit)}</td>` : ''}</tr>
+${r0(`${nm} 산출세액`, 'computed')}
+${r0('예상 세금 합계', 'total', 'total')}
+</tbody></table>
+<p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) 세전이익이 없어 올해 ${nm}는 발생하지 않을 것으로 보입니다. 손실(결손금)은 다음 해 이익에서 공제됩니다. 기말 결산조정 결과에 따라 달라질 수 있습니다.</p>`;
+    }
     const r = (label, k, cls) => `<tr class="${cls || ''}"><td>${label}</td><td>${Fmt.wonUnit(t.actual[k], unit)}</td>${est ? `<td>${Fmt.wonUnit(t.annual[k], unit)}</td>` : ''}</tr>`;
     return `<table class="mini"><thead><tr><th>구분</th><th>${b.months}개월 실적 기준</th>${est ? '<th>12개월 환산 기준</th>' : ''}</tr></thead><tbody>
 <tr><td>세전이익</td><td class="${b.m.pretax < 0 ? 'neg' : ''}">${Fmt.wonUnit(b.m.pretax, unit)}</td>${est ? `<td class="${b.a.pretax < 0 ? 'neg' : ''}">${Fmt.wonUnit(b.a.pretax, unit)}</td>` : ''}</tr>
