@@ -229,7 +229,7 @@ ${e.amount && n.note ? `<div class="r3">${escA(n.note)}</div>` : ''}
       dateText: isoToKo($('date').value || todayISO()), footnote: C.footnote,
       comment: readComment(), plan: currentPlan(),
     };
-    const options = { unit: +$('unit').value || 1, showTax: $('showTax').checked, cover: $('cover').checked, split: 0 };
+    const options = { unit: +$('unit').value || 1, showTax: $('showTax').checked, cover: $('cover').checked };
     return { meta, analysis: state.analysis, options };
   }
   function renderReport() {
@@ -238,25 +238,35 @@ ${e.amount && n.note ? `<div class="r3">${escA(n.note)}</div>` : ''}
     $('preparer').classList.toggle('req-missing', !$('preparer').value.trim());
     const model = buildModel();
     state.layoutOverflow = false;
-    window.Report.render(rep, model);
     fitPages(rep, model);
-    $('layoutWarn').textContent = state.layoutOverflow ? '⚠ 담당자 종합 의견이 너무 길어 보고서 한 쪽을 넘칩니다. 잘려서 인쇄되니 내용을 줄여 주세요.' : '';
+    $('layoutWarn').textContent = state.layoutOverflow ? '⚠ 한 문단이 A4 한 쪽보다 길어 잘립니다. 문단을 나눠(줄바꿈) 주세요.' : '';
     btn.disabled = false;
     const n = rep.querySelectorAll('.page').length;
     $('pageInfo').textContent = `A4 ${n}장`;
     console.info(`REPORT_READY pages=${n} years=${state.years.map(y => y.year).join(',')}`);
   }
-  /* 쪽 맞춤: 2쪽이 넘치면 세액·실행계획을 다음 쪽으로 넘긴다(글자 축소 대신). 그래도 넘치면 압축 모드. */
+  /* 쪽 맞춤: 2쪽 단위(문단·포인트·표)를 높이를 재 가며 차례로 채운다. 넘치면 다음 쪽으로 — 장수 제한 없음. */
+  function paginate(rep, model) {
+    const units = window.Report.page2Units(model);
+    const probe = document.createElement('div'); probe.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;'; rep.appendChild(probe);
+    const fits = (group) => { probe.innerHTML = window.Report.page2Html(model, group, 1, 1, false, {}); const pg = probe.firstElementChild; return pg.scrollHeight <= pg.clientHeight + 1; };
+    const groups = []; let cur = [];
+    for (const u of units) {
+      if (cur.length && !fits(cur.concat(u))) { groups.push(cur); cur = []; }
+      cur.push(u);
+    }
+    if (cur.length) groups.push(cur);
+    probe.remove();
+    return groups;
+  }
   function fitPages(rep, model) {
+    const groups = paginate(rep, model);
+    window.Report.render(rep, model, groups);
     const over = p => p.scrollHeight > p.clientHeight + 1;
-    const pages = () => [...rep.querySelectorAll('.page')];
-    const p2over = () => pages().some(p => p.classList.contains('p2') && over(p));
-    if (!pages().some(over)) return;
-    // 1단계: 세액·관리계획을 다음 쪽으로 → 2단계: 진단 포인트까지 다음 쪽으로
-    for (const lv of [1, 2]) { if (!p2over()) break; model.options.split = lv; window.Report.render(rep, model); }
-    pages().forEach(p => { if (over(p)) p.classList.add('compact'); });
-    state.layoutOverflow = pages().some(over);
-    if (state.layoutOverflow) console.warn('A4 한 장을 넘치는 페이지가 있습니다. 담당자 의견이 너무 길 수 있습니다.');
+    const pages = [...rep.querySelectorAll('.page')];
+    pages.forEach(p => { if (over(p)) p.classList.add('compact'); });
+    state.layoutOverflow = pages.some(over);
+    if (state.layoutOverflow) console.warn('A4 한 장을 넘치는 페이지가 있습니다.');
   }
 
   function renderAll() { renderFiles(); renderWarnings(); renderData(); renderExtras(); renderPlan(); renderReport(); }
@@ -274,7 +284,7 @@ ${e.amount && n.note ? `<div class="r3">${escA(n.note)}</div>` : ''}
       `공제·감면: ${t.hasCredit ? t.creditLabel : '없음'} · 추가 비용 반영: ${t.extra ? Fmt.man(t.extra.total) : '없음'}${t.pendingExtras.length ? ` (검토 필요 ${t.pendingExtras.length}건 미반영)` : ''}`,
       `담당자: ${$('preparer').value.trim()} · 담당자 의견: ${$('commentMode').value === 'none' ? '없음' : '포함'} · 출력: A4 ${$('report').querySelectorAll('.page').length}장`,
     ];
-    if (state.layoutOverflow) lines.push('', '⚠ 담당자 종합 의견이 너무 길어 한 쪽을 넘칩니다. 잘려서 인쇄됩니다.');
+    if (state.layoutOverflow) lines.push('', '⚠ 한 문단이 A4 한 쪽보다 길어 잘립니다.');
     if (errs.length) lines.push('', '⚠ 데이터 오류 (확인 후 출력 권장):', ...errs.map(i => ' - ' + i.text));
     if (warns.length) lines.push('', '주의:', ...warns.map(i => ' - ' + i.text));
     lines.push('', '이 내용으로 PDF를 만들까요?');

@@ -200,26 +200,32 @@
   }
 
   /* ---------- 2쪽 블록 ---------- */
-  function opinionBlock(model) {
+  /* 담당자 종합 의견 → 문단 단위 '단위' 목록 (쪽이 넘치면 문단 사이에서 다음 쪽으로 이어진다) */
+  function opinionUnits(model) {
     const { meta } = model; const cm = meta.comment || {};
-    if (!cm.mode || cm.mode === 'none') return '';
-    let body = '';
-    if (cm.mode === 'free') { if (!(cm.free || '').trim()) return ''; body = `<p>${nl2br(cm.free.trim())}</p>`; }
-    else {
-      const secs = [['종합 의견', cm.overall], ['중점 검토사항', cm.focus], ['향후 관리계획', cm.plan]].filter(([, v]) => (v || '').trim());
-      if (!secs.length) return '';
-      body = secs.map(([h, v]) => `<div class="op-sec"><h4>${h}</h4><p>${nl2br(v.trim())}</p></div>`).join('');
-    }
-    return `<div class="opinion"><div class="lbl">담당자 종합 의견</div>${body}<div class="sign">${esc(meta.firm)}${meta.preparer ? ` · 담당 ${esc(meta.preparer)}` : ''}</div></div>`;
+    if (!cm.mode || cm.mode === 'none') return [];
+    const units = [];
+    const pushLines = (head, text) => {
+      const lines = String(text || '').split('\n').map(l => l.trim()).filter(Boolean);
+      lines.forEach((l, i) => units.push({ type: 'op', html: `<div class="op-sec">${i === 0 && head ? `<h4>${head}</h4>` : ''}<p>${esc(l)}</p></div>` }));
+    };
+    if (cm.mode === 'free') pushLines(null, cm.free);
+    else [['종합 의견', cm.overall], ['중점 검토사항', cm.focus], ['향후 관리계획', cm.plan]].forEach(([h, v]) => { if ((v || '').trim()) pushLines(h, v); });
+    return units;
+  }
+  function opinionWrap(model, unitsHtml, cont, last) {
+    const { meta } = model;
+    return `<div class="opinion"><div class="lbl">담당자 종합 의견${cont ? ' (계속)' : ''}</div>${unitsHtml}${last ? `<div class="sign">${esc(meta.firm)}${meta.preparer ? ` · 담당 ${esc(meta.preparer)}` : ''}</div>` : ''}</div>`;
   }
 
   function summaryBlock(analysis) {
     const fb = analysis.feedback;
     return `<div class="summary"><div class="lbl">종합 평가</div><p>${esc(fb.summary)}</p>${fb.note ? `<div class="note">※ ${esc(fb.note)}</div>` : ''}</div>`;
   }
-  function pointsBlock(analysis) {
-    return `<h3 class="sec">주요 경영·세무 진단 포인트</h3><ul class="points">${analysis.feedback.points.map(pt => `<li><span class="dot ${pt.tone}"></span><div><b>${esc(pt.title)}</b><p>${esc(pt.body)}</p></div></li>`).join('')}</ul>`;
+  function pointUnits(analysis) {
+    return analysis.feedback.points.map(pt => ({ type: 'pt', html: `<li><span class="dot ${pt.tone}"></span><div><b>${esc(pt.title)}</b><p>${esc(pt.body)}</p></div></li>` }));
   }
+  const pointsWrap = (unitsHtml, cont) => `<h3 class="sec">주요 경영·세무 진단 포인트${cont ? ' (계속)' : ''}</h3><ul class="points">${unitsHtml}</ul>`;
 
   /* 세율 구간 띠: 누진 구조 설명 (구간 변경을 이유로 지출을 권하지 않는다) */
   function bracketBox(analysis) {
@@ -301,29 +307,60 @@ ${pending}
 </div>`;
   }
 
-  /* split: 0 = 한 쪽, 1 = 세액·관리계획을 다음 쪽으로, 2 = 진단 포인트부터 다음 쪽으로 */
-  function page2(model, pageNo, total, split) {
+  /* ---------- 2쪽 단위 목록 ---------- */
+  function page2Units(model) {
     const { analysis, options } = model; const unit = options.unit || 1;
-    const head = summaryBlock(analysis) + opinionBlock(model);
-    const pts = pointsBlock(analysis);
-    const blockA = head + pts;
+    const units = [{ type: 'summary', html: summaryBlock(analysis) }];
+    units.push(...opinionUnits(model));
+    units.push(...pointUnits(analysis));
     const taxCol = options.showTax ? `<div><h3 class="sec">예상 세액과 계산 근거 <small>${analysis.tax.entity === 'indiv' ? '종합소득세' : '법인세'} + 지방소득세 · 추정</small></h3>${taxTable(analysis, unit)}</div>` : '';
     const planCol = `<div><h3 class="sec">연말까지 확인할 사항 및 향후 관리계획</h3>${planBlock(model)}</div>`;
-    const blockB = `<div class="two-col${options.showTax ? '' : ' single'}">${taxCol}${planCol}</div>
-  <div class="disclaimer">보고일 현재 장부 기준 가결산 추정치입니다. 실제 결산·세액은 달라질 수 있으니 중요한 결정 전에는 담당자와 상의해 주세요.</div>`;
-    if (!split) return `<section class="page p2">${header(model, '세무 진단 및 향후 관리계획', 'Ⅱ')}${blockA}${blockB}${footer(model, pageNo, total)}</section>`;
-    const first = split >= 2 ? head : blockA, rest = split >= 2 ? pts + blockB : blockB;
-    return `<section class="page p2">${header(model, '세무 진단 및 향후 관리계획', 'Ⅱ')}${first}${footer(model, pageNo, total)}</section>
-<section class="page p2 cont">${header(model, '세무 진단 및 향후 관리계획 (계속)', 'Ⅱ')}${rest}${footer(model, pageNo + 1, total)}</section>`;
+    units.push({ type: 'taxplan', html: `<div class="two-col${options.showTax ? '' : ' single'}">${taxCol}${planCol}</div>` });
+    units.push({ type: 'disc', html: `<div class="disclaimer">보고일 현재 장부 기준 가결산 추정치입니다. 실제 결산·세액은 달라질 수 있으니 중요한 결정 전에는 담당자와 상의해 주세요.</div>` });
+    return units;
   }
 
-  /** options: { unit, showTax, cover, split } */
-  function render(container, model) {
-    const o = model.options || {};
-    const total = (o.cover ? 1 : 0) + 2 + (o.split ? 1 : 0);
+  /* 한 쪽에 들어갈 단위들을 HTML로: 연속된 의견 문단은 하나의 상자로, 연속된 포인트는 하나의 목록으로 */
+  function unitsHtml(model, units, info) {
+    info = info || {};
+    let out = ''; let i = 0;
+    while (i < units.length) {
+      const u = units[i];
+      if (u.type === 'op' || u.type === 'pt') {
+        let j = i; let buf = '';
+        while (j < units.length && units[j].type === u.type) { buf += units[j].html; j++; }
+        const firstIdx = info.index !== undefined ? info.index + i : null;
+        if (u.type === 'op') out += opinionWrap(model, buf, info.opStarted && firstIdx !== info.opFirst, info.opLast !== undefined ? (info.index + j - 1) >= info.opLast : true);
+        else out += pointsWrap(buf, info.ptStarted && firstIdx !== info.ptFirst);
+        i = j;
+      } else { out += u.html; i++; }
+    }
+    return out;
+  }
+
+  function page2Html(model, units, pageNo, total, cont, info) {
+    return `<section class="page p2${cont ? ' cont' : ''}">${header(model, `세무 진단 및 향후 관리계획${cont ? ' (계속)' : ''}`, 'Ⅱ')}${unitsHtml(model, units, info)}${footer(model, pageNo, total)}</section>`;
+  }
+
+  /** groups: 2쪽 단위를 쪽별로 나눈 배열(app.js 가 높이를 재서 만든다). 없으면 한 쪽에 전부. */
+  function compose(model, groups) {
+    const o = model.options || {}; const all = page2Units(model);
+    if (!groups) groups = [all];
+    const total = (o.cover ? 1 : 0) + 1 + groups.length;
     let n = o.cover ? 2 : 1;
-    container.innerHTML = (o.cover ? cover(model) : '') + page1(model, n, total) + page2(model, n + 1, total, o.split | 0);
+    const opIdx = all.map((u, i) => u.type === 'op' ? i : -1).filter(i => i >= 0);
+    const ptIdx = all.map((u, i) => u.type === 'pt' ? i : -1).filter(i => i >= 0);
+    let html = (o.cover ? cover(model) : '') + page1(model, n, total);
+    let idx = 0;
+    groups.forEach((g, gi) => {
+      const info = { index: idx, opFirst: opIdx[0], opLast: opIdx[opIdx.length - 1], opStarted: opIdx.length && idx > opIdx[0], ptFirst: ptIdx[0], ptStarted: ptIdx.length && idx > ptIdx[0] };
+      html += page2Html(model, g, n + 1 + gi, total, gi > 0, info);
+      idx += g.length;
+    });
+    return html;
   }
 
-  window.Report = { render, periodText, koDate };
+  function render(container, model, groups) { container.innerHTML = compose(model, groups); }
+
+  window.Report = { render, compose, page2Units, page2Html, periodText, koDate };
 })();
