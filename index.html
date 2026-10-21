@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-<link rel="stylesheet" href="css/app.css?v=7">
-<link rel="stylesheet" href="css/report.css?v=7">
+<link rel="stylesheet" href="css/app.css?v=8">
+<link rel="stylesheet" href="css/report.css?v=8">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
@@ -56,7 +56,12 @@
     <table class="datatbl extras" id="extras"></table>
     <div class="extra-total">추가 비용 합계 <b id="extraTotal">0</b> 원 · 예상 절세액 <b id="extraSaved" class="up">0</b> 원</div>
 
-    <h2><span class="step">5</span>읽어낸 숫자 확인 <button id="btnAddYear" class="btn small" style="float:right">연도 직접 추가</button></h2>
+    <h2><span class="step">5</span>담당자 코멘트</h2>
+    <div class="field"><label for="commentMode">코멘트</label><select id="commentMode"><option value="text">입력</option><option value="none">없음</option></select></div>
+    <textarea id="comment" rows="5" placeholder="보고서 3쪽 예상 세금 아래에 들어갑니다. 예) 올해는 매출이 꾸준히 늘고 있어 하반기 세금 부담이 커질 수 있습니다. 11월 중 추가 경비 계획을 한 번 더 점검하겠습니다."></textarea>
+    <p class="hint">줄바꿈 그대로 출력됩니다. 비워 두거나 '없음'을 고르면 코멘트란 없이 출력됩니다.</p>
+
+    <h2><span class="step">6</span>읽어낸 숫자 확인 <button id="btnAddYear" class="btn small" style="float:right">연도 직접 추가</button></h2>
     <div id="datatbl"></div>
     <div id="details"></div>
     <p class="hint">숫자를 고치면 보고서가 바로 다시 계산됩니다. 노란색 칸은 손으로 고친 값입니다. 구성 항목을 고치면 매출총이익·영업이익·세전이익·당기순이익은 자동으로 다시 계산됩니다.</p>
@@ -70,10 +75,10 @@
 
 <div id="toast" class="toast"></div>
 
-<script src="js/config.js?v=7"></script>
-<script src="js/parser.js?v=7"></script>
-<script src="js/analysis.js?v=7"></script>
-<script src="js/report.js?v=7"></script>
-<script src="js/app.js?v=7"></script>
+<script src="js/config.js?v=8"></script>
+<script src="js/parser.js?v=8"></script>
+<script src="js/analysis.js?v=8"></script>
+<script src="js/report.js?v=8"></script>
+<script src="js/app.js?v=8"></script>
 </body>
 </html>

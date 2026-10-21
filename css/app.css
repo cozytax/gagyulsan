@@ -59,6 +59,9 @@ table.extras .x { border: 0; background: none; cursor: pointer; color: #7b8494; 
 .extra-total { font-size: 12.5px; color: #4b5563; margin: 8px 0 2px; text-align: right; }
 .extra-total b { color: #1d2433; }
 .extra-total b.up { color: #1f7a4d; }
+#comment { width: 100%; padding: 8px 10px; border: 1px solid #d6dbe3; border-radius: 6px; resize: vertical; line-height: 1.5; font-size: 13px; }
+#comment:focus { outline: 2px solid #b9c6dc; border-color: #14487e; }
+#comment:disabled { background: #f1f3f6; color: #9aa3b2; }
 details.detail-box { margin-top: 6px; }
 details.detail-box summary { cursor: pointer; font-size: 12.5px; color: #1f3a63; font-weight: 600; }
 .detail-list { font-size: 11.5px; color: #4b5563; max-height: 220px; overflow: auto; border: 1px solid #e8ecf1; padding: 6px 8px; margin-top: 6px; }

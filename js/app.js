@@ -151,6 +151,7 @@
       preparer: $('preparer').value.trim(),
       dateText: isoToKo($('date').value || todayISO()),
       footnote: C.footnote,
+      comment: $('commentMode').value === 'none' ? '' : $('comment').value.trim(),
     };
     const options = { unit: +$('unit').value || 1, showTax: $('showTax').checked };
     window.Report.render(rep, { meta, analysis: state.analysis, options });
@@ -266,6 +267,8 @@
     document.addEventListener('dragover', e => e.preventDefault()); document.addEventListener('drop', e => e.preventDefault());
 
     ['title', 'company', 'firm', 'preparer', 'date', 'unit', 'showTax'].forEach(id => $(id).addEventListener('input', () => { pref.set(id, $(id).value); renderReport(); }));
+    $('comment').addEventListener('input', renderReport);
+    $('commentMode').addEventListener('change', () => { $('comment').disabled = $('commentMode').value === 'none'; renderReport(); });
     $('entity').value = C.defaultEntity || 'indiv';
     const ct = $('creditType'); C.creditTypes.forEach(t => { const o = document.createElement('option'); o.value = t.key; o.textContent = t.label; ct.appendChild(o); });
     syncCreditUI();
@@ -282,7 +285,7 @@
     };
     $('btnAddExtra').onclick = () => { state.extras.push({ label: '', amount: 0 }); renderExtras(); tbl_focusLast(); };
     const tbl_focusLast = () => { const ins = $('extras').querySelectorAll('input.lbl'); if (ins.length) ins[ins.length - 1].focus(); };
-    $('btnReset').onclick = () => { if (!confirm('올린 파일과 수정한 값을 모두 지울까요?')) return; state.files = []; state.manual = {}; state.edits = {}; state._entitySet = false; state.extras = [{ label: '', amount: 0 }, { label: '', amount: 0 }, { label: '', amount: 0 }]; $('company').value = ''; $('entity').value = C.defaultEntity || 'indiv'; recompute(); };
+    $('btnReset').onclick = () => { if (!confirm('올린 파일과 수정한 값을 모두 지울까요?')) return; state.files = []; state.manual = {}; state.edits = {}; state._entitySet = false; state.extras = [{ label: '', amount: 0 }, { label: '', amount: 0 }, { label: '', amount: 0 }]; $('company').value = ''; $('comment').value = ''; $('commentMode').value = 'text'; $('comment').disabled = false; $('entity').value = C.defaultEntity || 'indiv'; recompute(); };
 
     renderAll();
     const q = new URLSearchParams(location.search).get('load');

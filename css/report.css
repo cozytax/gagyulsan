@@ -136,6 +136,11 @@ table.mini td.neg { color: var(--warn); }
 .saving .items { margin: 1.2mm 0 0; padding-left: 4mm; font-size: 7.8pt; color: var(--ink-2); columns: 2; }
 .saving .items li { margin-bottom: 0.3mm; break-inside: avoid; }
 .tax-note { font-size: 7.6pt; color: var(--muted); margin-top: 1.2mm; line-height: 1.45; }
+.comment { margin-top: 4mm; border: 1px solid var(--line); border-left: 3px solid var(--navy); background: #fbfbfd; padding: 2.6mm 3.5mm 2.2mm; }
+.comment .lbl { font-size: 8pt; letter-spacing: 0.2em; color: var(--navy); font-weight: 700; }
+.comment p { margin: 1mm 0 0; font-size: 9.4pt; color: var(--ink); line-height: 1.6; word-break: keep-all; }
+.comment .sign { margin-top: 1.5mm; text-align: right; font-size: 8pt; color: var(--muted); }
+.page.compact .comment p { font-size: 8.8pt; line-height: 1.5; }
 .disclaimer { margin-top: 4mm; padding: 2.2mm 3mm; background: #f7f7f7; border-left: 2px solid var(--line); font-size: 7.6pt; color: var(--muted); line-height: 1.45; }
 
 /* ---------- 인쇄 ---------- */
@@ -159,3 +164,10 @@ table.mini td.neg { color: var(--warn); }
 .page.compact .ratio .v { font-size: 12.5pt; }
 .page.compact h3.sec { margin: 3.5mm 0 1.5mm; }
 .page.compact .disclaimer { margin-top: 2.5mm; }
+
+/* 압축 모드: 2쪽(표·차트)에도 적용 */
+.page.compact .kpi { padding: 1.6mm 3.2mm 1.4mm; }
+.page.compact table.pl th, .page.compact table.pl td { padding: 0.55mm 2mm; }
+.page.compact table.mini th, .page.compact table.mini td { padding: 0.5mm 1.8mm; }
+.page.compact .chart-wrap { padding: 1.5mm 3mm 1mm; }
+.page.compact .unit-note { margin-bottom: 0.5mm; }
