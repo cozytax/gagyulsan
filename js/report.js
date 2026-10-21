@@ -69,7 +69,7 @@
     if (t.noTax) return `<div class="kpi"><div class="k">예상 세액<small>${nm}·추정</small></div><div class="row"><span class="tag est">추정</span><b class="v">0원</b></div><div class="s">세전이익이 없어 ${nm}가 발생하지 않을 것으로 보입니다</div></div>`;
     return `<div class="kpi">
   <div class="k">예상 세액<small>${nm}+지방소득세 · 산출 기준</small></div>
-  ${est ? `<div class="row"><span class="tag est">실적 ${shortPeriod(b)} 기준</span><b class="v">${Fmt.man(t.actual.total)}</b></div><div class="row"><span class="tag est">연환산 추정</span><b class="v2">${Fmt.man(t.annual.total)}</b></div>` : `<div class="row"><span class="tag est">추정</span><b class="v">${Fmt.man(t.annual.total)}</b></div>`}
+  ${est ? `<div class="row"><span class="tag est">실적 ${shortPeriod(b)} 기준</span><b class="v2">${Fmt.man(t.actual.total)}</b></div><div class="row"><span class="tag real">연환산 추정</span><b class="v">${Fmt.man(t.annual.total)}</b></div>` : `<div class="row"><span class="tag real">추정</span><b class="v">${Fmt.man(t.annual.total)}</b></div>`}
   <div class="s">기본세율 기준 산출세액${t.hasCredit ? '(공제·감면 후)' : ''} · 기납부세액 차감 전</div>
 </div>`;
   }
