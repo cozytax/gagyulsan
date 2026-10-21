@@ -200,7 +200,27 @@ ${t.hasCredit ? r(`(−) ${t.creditLabel}`, 'creditAmt') : ''}
 ${r('지방소득세 (10%)', 'local')}
 ${r('예상 세금 합계', 'total', 'total')}
 </tbody></table>
+${bracketBox(analysis)}
 <p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) ${nm} 기본세율만 적용한 단순 추정입니다. ${t.entity === 'indiv' ? '소득공제는 본인 기본공제만 반영했고, ' : ''}세무조정(접대비 한도·감가상각 등), ${t.hasCredit ? '선택한 항목 외의 공제·감면과 최저한세, ' : '각종 공제·감면, '}중간예납 기납부세액은 반영하지 않았습니다.</p>`;
+  }
+
+  /* 세율 구간 띠: 전 구간을 나란히 그리고 현재 구간 강조 */
+  function bracketBox(analysis) {
+    const t = analysis.tax; const bk = t.bracket; if (!bk) return '';
+    const nm = t.entity === 'indiv' ? '종합소득세' : '법인세';
+    const shortAmt = v => v >= 1e8 ? `${(v / 1e8).toFixed(v % 1e8 ? 1 : 0).replace(/\.0$/, '')}억` : `${Math.round(v / 1e4).toLocaleString('ko-KR')}만`;
+    const cur = bk.annual, aft = bk.after;
+    const segs = bk.list.map((br, i) => {
+      const isCur = i === cur.idx, isAft = aft && i === aft.idx && aft.idx !== cur.idx;
+      const lower = i > 0 ? bk.list[i - 1].limit : 0;
+      return `<div class="seg${isCur ? ' cur' : ''}${isAft ? ' aft' : ''}"><b>${br.rate * 100}%</b><small>${isFinite(br.limit) ? `~${shortAmt(br.limit)}` : `${shortAmt(lower)}~`}</small>${isCur ? '<i>현재</i>' : isAft ? '<i>반영 후</i>' : ''}</div>`;
+    }).join('');
+    let txt = `12개월 환산 과세표준 <b>${Fmt.man(cur.taxBase)}</b>은 <b>${cur.rate}% 구간</b>(${shortAmt(cur.lower)}~${cur.upper ? shortAmt(cur.upper) + '원' : ''})입니다.`;
+    if (cur.room !== null) txt += ` ${Fmt.man(cur.room)}을 더 벌면 ${cur.nextRate}% 구간으로 올라갑니다.`;
+    else txt += ' 최고 세율 구간입니다.';
+    if (aft && aft.idx !== cur.idx) txt += ` 추가 비용 반영 후에는 ${aft.rate}% 구간으로 내려옵니다.`;
+    else if (aft) txt += ' 추가 비용을 반영해도 같은 구간입니다.';
+    return `<div class="bracket"><div class="lbl">${nm} 세율 구간</div><div class="segs">${segs}</div><p>${txt}</p></div>`;
   }
 
   /* 추가 비용 반영 전/후 비교표 */
@@ -219,6 +239,7 @@ ${r('지방소득세 (10%)', A.local, B.local)}
 ${r('예상 세금 합계', A.total, B.total, 'total')}
 </tbody></table>
 <div class="saving"><div class="lbl">절세 효과</div><div class="big">${Fmt.man(x.saved)} <small>감소</small></div><div class="sub">추가 비용 ${Fmt.man(x.total)} 반영 시 · 지출 100원당 세금 약 ${x.marginal.toFixed(0)}원 감소 · 세금 차감 후 실제 부담 ${Fmt.man(x.netCost)}</div><ul class="items">${items}</ul></div>
+${bracketBox(analysis)}
 <p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) ${nm} 기본세율만 적용한 단순 추정입니다. 추가 비용은 실제 지출·증빙이 있어야 비용으로 인정되며, 세무조정·최저한세·중간예납 기납부세액은 반영하지 않았습니다.</p>`;
   }
 

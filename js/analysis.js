@@ -157,6 +157,14 @@
     for (const br of brackets) if (baseAmt <= br.limit) return baseAmt * br.rate - br.deduction;
     return 0;
   }
+  /* 세율 구간: 과세표준이 몇 번째 구간인지, 다음 구간까지 여유 */
+  function bracketInfo(taxBase, brackets) {
+    let idx = brackets.findIndex(br => taxBase <= br.limit); if (idx < 0) idx = brackets.length - 1;
+    const br = brackets[idx]; const lower = idx > 0 ? brackets[idx - 1].limit : 0;
+    const next = brackets[idx + 1] || null;
+    return { idx, rate: br.rate * 100, lower, upper: isFinite(br.limit) ? br.limit : null, room: isFinite(br.limit) ? br.limit - taxBase : null, nextRate: next ? next.rate * 100 : null, taxBase };
+  }
+
   function estimateTax(b, opts) {
     const entity = opts.entityType || C.defaultEntity || 'indiv';
     const credit = Math.min(1, Math.max(0, (opts.creditRate || 0) / 100));
@@ -191,7 +199,9 @@
       extra = { items: extras, total: extraTotal, after, afterActual, saved, savedActual: actual.total - afterActual.total,
         marginal: extraTotal > 0 ? saved / extraTotal * 100 : 0, netCost: extraTotal - saved, pretaxAfter: b.a.pretax - extraTotal };
     }
-    return { entity, creditType: opts.creditType || 'none', creditRate: credit * 100, creditAmount: creditFixed, creditLabel, hasCredit, loss, actual, annual, extra };
+    const brackets = entity === 'indiv' ? C.individualBrackets : C.corporateBrackets;
+    const bracket = annual.taxBase > 0 ? { list: brackets, annual: bracketInfo(annual.taxBase, brackets), actual: actual.taxBase > 0 ? bracketInfo(actual.taxBase, brackets) : null, after: extra && extra.after.taxBase > 0 ? bracketInfo(extra.after.taxBase, brackets) : null } : null;
+    return { entity, creditType: opts.creditType || 'none', creditRate: credit * 100, creditAmount: creditFixed, creditLabel, hasCredit, loss, actual, annual, extra, bracket };
   }
 
   /* ---------- 진단 문구 (규칙 기반) — 사장님이 읽는 글. 짧게, 결론부터. ---------- */
@@ -254,6 +264,7 @@
       if (net > 0) {
         let s = `올해 순이익 ${Fmt.man(net)}` + (b.r.netMargin !== null ? `(순이익률 ${Fmt.pct(b.r.netMargin)})` : '') + ' 예상.';
         if (tx.total > 0) s += ` 이대로면 ${nm} 약 ${Fmt.man(tx.total)}(지방소득세 포함)입니다.`;
+        if (tax.bracket) { const bi = tax.bracket.annual; s += ` 과세표준 ${Fmt.man(bi.taxBase)}은 세율 ${bi.rate}% 구간` + (bi.room !== null ? `이며, ${Fmt.man(bi.room)} 더 벌면 ${bi.nextRate}% 구간으로 올라갑니다.` : '(최고 구간)입니다.'); }
         else s += ` 공제·감면 적용 후 ${nm}는 거의 없을 것으로 보입니다.`;
         push('info', '예상 순이익과 세금', s);
       } else {

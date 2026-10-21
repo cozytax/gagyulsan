@@ -179,6 +179,11 @@
     }
     if (fb.points.length !== original.length) console.info(`진단 포인트 ${original.length - fb.points.length}개를 지면 사정으로 줄였습니다.`);
     fb.points = original.slice(); // 다음 렌더를 위해 원본 복구 (다시 넘치면 또 줄임)
+    // 그래도 넘치면 부가 요소를 순서대로 뺀다 (절세 항목 목록 → 환산 주석 → 비율 3개년 줄 → 세율 구간 띠)
+    for (const sel of ['.saving .items', '.summary .note', '.ratio .d', '.bracket']) {
+      if (!pointsOverflow()) break;
+      rep.querySelectorAll(sel).forEach(e => e.remove());
+    }
     if (overflow()) console.warn('A4 한 장을 넘치는 페이지가 있습니다.');
   }
 
@@ -200,6 +205,8 @@
     $('extraTotal').textContent = total.toLocaleString('ko-KR');
     const saved = state.analysis && state.analysis.tax.extra ? state.analysis.tax.extra.saved : 0;
     $('extraSaved').textContent = Math.round(saved).toLocaleString('ko-KR');
+    const bk = state.analysis && state.analysis.tax.bracket;
+    $('bracketInfo').innerHTML = bk ? `현재 세율 구간 <b>${bk.annual.rate}%</b> (12개월 환산 과세표준 ${Fmt.man(bk.annual.taxBase)})` + (bk.annual.room !== null ? ` · 다음 구간(${bk.annual.nextRate}%)까지 ${Fmt.man(bk.annual.room)} 여유` : ' · 최고 구간') + (bk.after && bk.after.idx !== bk.annual.idx ? ` · 추가 비용 반영 후 <b>${bk.after.rate}%</b>` : '') : (state.analysis ? '현재 세율 구간: 과세표준 없음(결손)' : '');
   }
 
   /* ---------- 공제·감면 선택 ---------- */
