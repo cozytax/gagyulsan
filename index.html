@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-<link rel="stylesheet" href="css/app.css?v=14">
-<link rel="stylesheet" href="css/report.css?v=14">
+<link rel="stylesheet" href="css/app.css?v=15">
+<link rel="stylesheet" href="css/report.css?v=15">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
@@ -39,7 +39,8 @@
     <div class="field"><label for="company">회사명</label><input id="company" type="text" placeholder="PDF에서 자동으로 읽습니다"></div>
     <div class="field"><label for="industry">업종</label><select id="industry"></select></div>
     <div class="field"><label for="firm">세무사무소</label><input id="firm" type="text"></div>
-    <div class="field"><label for="preparer">담당자</label><input id="preparer" type="text" placeholder="보고서에 '담당 ○○○'으로 표시"></div>
+    <div class="field"><label for="preparer">담당자 <span class="req">필수</span></label><input id="preparer" type="text" placeholder="이름 입력 — 보고서에 '담당 ○○○'으로 표시"></div>
+    <p class="hint" style="margin:-4px 0 8px 104px">한 번 입력하면 이 PC 브라우저에 기억됩니다(다른 PC는 각자 입력).</p>
     <div class="field"><label for="date">보고일</label><input id="date" type="date"></div>
     <div class="field"><label for="unit">표 금액 단위</label><select id="unit"><option value="1">원</option><option value="1000">천원</option></select></div>
     <div class="field"><label>출력 구성</label><div class="inline"><label class="inline"><input id="cover" type="checkbox" checked> 표지 포함(3장)</label><label class="inline"><input id="showTax" type="checkbox" checked> 예상 세액 표시</label></div></div>
@@ -60,7 +61,7 @@
     <div id="extras" class="extras"></div>
     <div class="extra-total"><span id="extraTotal"></span><br>추정 절세액 <b id="extraSaved" class="up">0</b> 원</div>
 
-    <h2><span class="step">5</span>담당 세무사 종합 의견</h2>
+    <h2><span class="step">5</span>담당자 종합 의견</h2>
     <div class="field"><label for="commentMode">입력 방식</label><select id="commentMode"><option value="structured">항목별 입력</option><option value="free">자유 입력</option><option value="none">없음</option></select></div>
     <div id="cmStructured">
       <label class="ta-label" for="cmOverall">종합 의견 <small>현재 재무·세무 상태 평가</small></label>
@@ -73,7 +74,7 @@
     <div id="cmFreeWrap" style="display:none">
       <textarea id="cmFree" rows="6" placeholder="자유롭게 작성합니다. 줄바꿈 그대로 출력됩니다."></textarea>
     </div>
-    <p class="hint">보고서 2쪽 상단 '담당 세무사 종합 의견' 상자에 들어갑니다. 비운 항목은 출력되지 않습니다.</p>
+    <p class="hint">보고서 2쪽 상단 '담당자 종합 의견' 상자에 들어갑니다. 비운 항목은 출력되지 않습니다.</p>
 
     <h2><span class="step">6</span>연말 확인사항·관리계획 <small class="h2sub">자동 생성 · 수정 가능</small></h2>
     <label class="ta-label" for="planClient">거래처 확인사항 <small>한 줄에 하나, " | 기한" 형식으로 기한 표시</small> <button id="planResetClient" class="btn small link">자동으로 되돌리기</button></label>
@@ -95,10 +96,10 @@
 
 <div id="toast" class="toast"></div>
 
-<script src="js/config.js?v=14"></script>
-<script src="js/parser.js?v=14"></script>
-<script src="js/analysis.js?v=14"></script>
-<script src="js/report.js?v=14"></script>
-<script src="js/app.js?v=14"></script>
+<script src="js/config.js?v=15"></script>
+<script src="js/parser.js?v=15"></script>
+<script src="js/analysis.js?v=15"></script>
+<script src="js/report.js?v=15"></script>
+<script src="js/app.js?v=15"></script>
 </body>
 </html>

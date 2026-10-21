@@ -210,7 +210,7 @@
       if (!secs.length) return '';
       body = secs.map(([h, v]) => `<div class="op-sec"><h4>${h}</h4><p>${nl2br(v.trim())}</p></div>`).join('');
     }
-    return `<div class="opinion"><div class="lbl">담당 세무사 종합 의견</div>${body}<div class="sign">${esc(meta.firm)}${meta.preparer ? ` · 담당 ${esc(meta.preparer)}` : ''}</div></div>`;
+    return `<div class="opinion"><div class="lbl">담당자 종합 의견</div>${body}<div class="sign">${esc(meta.firm)}${meta.preparer ? ` · 담당 ${esc(meta.preparer)}` : ''}</div></div>`;
   }
 
   function summaryBlock(analysis) {

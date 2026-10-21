@@ -235,6 +235,7 @@ ${e.amount && n.note ? `<div class="r3">${escA(n.note)}</div>` : ''}
   function renderReport() {
     const rep = $('report'); const btn = $('btnPrint');
     if (!state.analysis) { rep.innerHTML = '<div class="empty"><b>왼쪽에 손익계산서 PDF를 올리면</b><br>경영성과 요약 · 세무 진단 및 관리계획 2장짜리 보고서가 여기에 만들어집니다.<br><small>표지가 필요하면 "표지 포함"을 체크하세요.</small></div>'; btn.disabled = true; $('pageInfo').textContent = ''; return; }
+    $('preparer').classList.toggle('req-missing', !$('preparer').value.trim());
     const model = buildModel();
     window.Report.render(rep, model);
     fitPages(rep, model);
@@ -258,6 +259,7 @@ ${e.amount && n.note ? `<div class="r3">${escA(n.note)}</div>` : ''}
   /* ---------- PDF 저장(인쇄): 출력 전 최종 확인 ---------- */
   function printReport() {
     if (!state.analysis) return;
+    if (!$('preparer').value.trim()) { toast('담당자 이름을 입력해 주세요 (필수).', 3000); $('preparer').classList.add('req-missing'); $('preparer').focus(); return; }
     const b = state.analysis.base; const t = state.analysis.tax;
     const errs = state.issues.filter(i => i.level === 'error'); const warns = state.issues.filter(i => i.level === 'warn');
     const lines = [
@@ -265,7 +267,7 @@ ${e.amount && n.note ? `<div class="r3">${escA(n.note)}</div>` : ''}
       `기준기간: ${window.Report.periodText(b)}${b.factor !== 1 ? ' → 12개월 환산' : ''}`,
       `사업자 구분: ${t.entity === 'indiv' ? '개인(종합소득세)' : '법인(법인세)'} · 업종: ${$('industry').selectedOptions[0].textContent}`,
       `공제·감면: ${t.hasCredit ? t.creditLabel : '없음'} · 추가 비용 반영: ${t.extra ? Fmt.man(t.extra.total) : '없음'}${t.pendingExtras.length ? ` (검토 필요 ${t.pendingExtras.length}건 미반영)` : ''}`,
-      `담당 세무사 의견: ${$('commentMode').value === 'none' ? '없음' : '포함'} · 출력: A4 ${$('report').querySelectorAll('.page').length}장`,
+      `담당자: ${$('preparer').value.trim()} · 담당자 의견: ${$('commentMode').value === 'none' ? '없음' : '포함'} · 출력: A4 ${$('report').querySelectorAll('.page').length}장`,
     ];
     if (errs.length) lines.push('', '⚠ 데이터 오류 (확인 후 출력 권장):', ...errs.map(i => ' - ' + i.text));
     if (warns.length) lines.push('', '주의:', ...warns.map(i => ' - ' + i.text));
