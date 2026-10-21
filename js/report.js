@@ -70,7 +70,7 @@
     return `<div class="kpi">
   <div class="k">예상 세액<small>${nm}+지방소득세 · 산출 기준</small></div>
   ${est ? `<div class="row"><span class="tag est">실적 ${shortPeriod(b)} 기준</span><b class="v">${Fmt.man(t.actual.total)}</b></div><div class="row"><span class="tag est">연환산 추정</span><b class="v2">${Fmt.man(t.annual.total)}</b></div>` : `<div class="row"><span class="tag est">추정</span><b class="v">${Fmt.man(t.annual.total)}</b></div>`}
-  <div class="s">기본세율로 계산한 예상 산출세액${t.hasCredit ? '(공제·감면 후)' : ''}입니다.<br>기납부세액 차감 전이라 실제 납부액과 다릅니다.</div>
+  <div class="s">기본세율 기준 산출세액${t.hasCredit ? '(공제·감면 후)' : ''} · 기납부세액 차감 전</div>
 </div>`;
   }
 
@@ -112,8 +112,8 @@
     }).join('');
     const partialPrev = prevRows.filter(y => y.factor !== 1);
     const notes = [];
-    if (est) notes.push(`${b.year}년 연환산 = ${b.months}개월 실적 × ${(12 / b.months).toFixed(2)} (단순 비례 추정)`);
-    if (partialPrev.length) notes.push(`${partialPrev.map(y => `${y.year}년은 ${y.months}개월 실적`).join(', ')}이므로 전년 대비는 양쪽 모두 12개월로 환산해 비교`);
+    if (est) notes.push(`연환산 = ${b.months}개월 실적 × ${(12 / b.months).toFixed(2)} (추정)`);
+    if (partialPrev.length) notes.push(`${partialPrev.map(y => `${y.year}년(${y.months}개월)`).join(', ')}도 12개월로 환산해 비교`);
     return `<div class="unit-note">(단위: ${unit === 1000 ? '천원' : '원'})</div><table class="pl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>${notes.length ? `<div class="unit-note left">※ ${notes.join(' · ')}</div>` : ''}`;
   }
 
@@ -155,7 +155,7 @@
     const legend = rows.map((y, i) => `<span><i style="background:${colors[i]}"></i>${y.year}년${y.factor !== 1 ? ` 실적(${y.months}개월)` : ''}</span>`).join('') + (anyPartial ? `<span><i style="background:var(--y3e)"></i>12개월 환산 추정분</span>` : '');
     return `<div class="chart-wrap"><div class="chart-legend">${legend}</div>
 <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="매출·영업이익 연도별 추이">${svg}</svg>
-<div class="chart-note">막대 위 숫자는 금액(만원·억원).${anyPartial ? ' *표시는 12개월 환산 추정값이며, 진한 색이 실제 실적, 연한 색이 환산 추정분입니다.' : ''} 손실은 기준선 아래로 표시됩니다.</div></div>`;
+<div class="chart-note">${anyPartial ? '진한 색 실제 실적 · 연한 색 12개월 환산 추정(*)' : '막대 위 숫자는 금액(만원·억원)'}${rows.some(y => y.m.op < 0 || y.m.sales < 0) ? ' · 손실은 기준선 아래' : ''}</div></div>`;
   }
 
   /* ---------- 비용 구조표 ---------- */
@@ -169,7 +169,7 @@
     return `<table class="mini"><thead><tr><th>판관비 항목${ind && ind.key && ind.focus.length ? `<small> ${ind.label} 중점 항목 우선</small>` : ''}</th><th>${b.year}년${est ? '(연환산)' : ''}</th>${analysis.prev ? `<th>${analysis.prev.year}년</th>` : ''}<th>매출 대비</th>${analysis.prev ? '<th>증감</th>' : ''}</tr></thead>
 <tbody>${rows}${etc > 0.5 ? `<tr><td>기타</td><td>${Fmt.wonUnit(etc, unit)}</td>${analysis.prev ? '<td>-</td>' : ''}<td>${Fmt.pct(etc / Math.abs(b.a.sales || 1) * 100)}</td>${analysis.prev ? '<td>-</td>' : ''}</tr>` : ''}
 <tr class="total"><td>판관비 합계</td><td>${Fmt.wonUnit(sgaA, unit)}</td>${analysis.prev ? `<td>${Fmt.wonUnit(sgaP, unit)}</td>` : ''}<td>${Fmt.pct(b.r.sgaRatio)}</td>${analysis.prev ? `<td class="${b.g.sga > 0 ? 'up' : b.g.sga < 0 ? 'down' : ''}">${Fmt.delta(b.g.sga)}</td>` : ''}</tr></tbody></table>
-<p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) 매출 대비 = 항목 금액 ÷ 매출액.${c.labor.cur > 0 ? ` 인건비 합계(급여·상여 등) ${Fmt.man(c.labor.cur)}, 매출의 ${Fmt.pct(c.labor.share)}.` : ''}</p>`;
+<p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'})${c.labor.cur > 0 ? ` 인건비 합계 ${Fmt.man(c.labor.cur)}(매출의 ${Fmt.pct(c.labor.share)})` : ''}</p>`;
   }
 
   function glossary() {
@@ -188,7 +188,7 @@
     ${kpi('영업이익', b, 'op', 'op', g('op'), same, est, { sub: '매출 − 원가 − 판관비' })}
     ${options.showTax ? kpiTax(analysis, est) : kpi('당기순이익', b, 'net', 'net', g('net'), same, est)}
   </div>
-  <h3 class="sec">손익계산서 요약 <small>최근 ${analysis.rows.length}개년 비교${est ? ` · ${b.year}년은 실제 실적과 12개월 환산 추정을 함께 표시` : ''}${same ? ' · 전년 동기 실적 포함' : ''}</small></h3>
+  <h3 class="sec">손익계산서 요약 <small>${analysis.rows.length > 1 ? `최근 ${analysis.rows.length}개년` : ''}${est ? ' · 실적과 12개월 환산(추정)' : ''}${same ? ' · 전년 동기' : ''}</small></h3>
   ${plTable(model)}
   <div class="two-col gap">
     <div><h3 class="sec">매출·영업이익 추이</h3>${chart(analysis)}</div>
@@ -232,16 +232,14 @@
       const lower = i > 0 ? bk.list[i - 1].limit : 0;
       return `<div class="seg${isCur ? ' cur' : ''}${isAft ? ' aft' : ''}"><b>${br.rate * 100}%</b><small>${isFinite(br.limit) ? `~${shortAmt(br.limit)}` : `${shortAmt(lower)}~`}</small>${isCur ? '<i>현재</i>' : isAft ? '<i>반영 후</i>' : ''}</div>`;
     }).join('');
-    let txt = `연환산 과세표준 <b>${Fmt.man(cur.taxBase)}</b>은 <b>${cur.rate}% 구간</b>(${shortAmt(cur.lower)}~${cur.upper ? shortAmt(cur.upper) + '원' : ''})입니다. ${cur.rate}% 세율은 ${cur.lower > 0 ? `${shortAmt(cur.lower)}원을 초과하는 ${Fmt.man(cur.inBracket)}에만` : '이 구간 금액에'} 적용되고, 그 아래 금액은 낮은 세율로 계산됩니다(누진 구조).`;
-    if (cur.room !== null) txt += ` ${shortAmt(cur.upper)}원을 넘는 금액부터는 ${cur.nextRate}%가 적용됩니다(현재 구간 상한까지 ${Fmt.man(cur.room)}).`;
-    else txt += ' 최고 세율 구간입니다.';
-    if (aft && aft.idx !== cur.idx) txt += ` 추가 비용 반영 후 과세표준은 ${aft.rate}% 구간에 해당합니다.`;
+    let txt = `과세표준 <b>${Fmt.man(cur.taxBase)}</b> → <b>${cur.rate}% 구간</b>. ${cur.lower > 0 ? `${cur.rate}%는 ${shortAmt(cur.lower)}원을 넘는 금액에만 적용되고 그 아래는 낮은 세율입니다(누진).` : '가장 낮은 세율 구간입니다.'}`;
+    if (aft && aft.idx !== cur.idx) txt += ` 추가 비용 반영 후에는 ${aft.rate}% 구간입니다.`;
     return `<div class="bracket"><div class="lbl">${nm} 세율 구간 (${t.tableYear}년 기준 세율표${t.tableExact ? '' : ' 준용'})</div><div class="segs">${segs}</div><p>${txt}</p></div>`;
   }
 
   function taxNote(t, unit) {
     const nm = t.entity === 'indiv' ? '종합소득세' : '법인세';
-    return `<p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) 기본세율 기준 예상 산출세액입니다. 실제 신고 납부세액은 ${t.entity === 'indiv' ? '다른 종합소득(근로·임대 등)과 소득공제, ' : ''}세무조정, 공제·감면 및 기납부세액(중간예납·원천징수) 등에 따라 달라질 수 있습니다.${t.entity === 'indiv' ? ' 소득공제는 본인 기본공제만 반영했습니다.' : ''}</p>`;
+    return `<p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) 기본세율 기준 예상 산출세액입니다. 실제 납부세액은 ${t.entity === 'indiv' ? '다른 소득·소득공제, ' : ''}세무조정·공제감면·기납부세액에 따라 달라집니다.</p>`;
   }
 
   function taxTable(analysis, unit) {
@@ -253,9 +251,9 @@
     const pretaxRow = `<tr><td>세전이익</td><td class="${b.m.pretax < 0 ? 'neg' : ''}">${Fmt.wonUnit(b.m.pretax, unit)}</td>${est ? `<td class="${b.a.pretax < 0 ? 'neg' : ''}">${Fmt.wonUnit(b.a.pretax, unit)}</td>` : ''}</tr>`;
     if (t.noTax) {
       return `<table class="mini">${head}<tbody>${pretaxRow}${r(`${nm} 예상 산출세액`, 'computed')}${r('예상 세액 합계', 'total', 'total')}</tbody></table>
-<p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) 세전이익이 없어 올해 ${nm}는 발생하지 않을 것으로 보입니다. 손실(결손금)은 다음 해 이익에서 공제됩니다. 기말 결산조정 결과에 따라 달라질 수 있습니다.</p>`;
+<p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) 세전이익이 없어 올해 ${nm}는 발생하지 않을 것으로 보이며, 손실은 다음 해 이익에서 공제됩니다.</p>`;
     }
-    const pending = t.pendingExtras && t.pendingExtras.length ? `<p class="tax-note">검토 중인 지출 계획(${t.pendingExtras.map(e => `${esc(e.label)} ${Fmt.man(e.amount)}`).join(', ')})은 비용 인정 여부 확인 후 반영합니다.</p>` : '';
+    const pending = t.pendingExtras && t.pendingExtras.length ? `<p class="tax-note">검토 중(미반영): ${t.pendingExtras.map(e => `${esc(e.label)} ${Fmt.man(e.amount)}`).join(', ')}</p>` : '';
     return `<table class="mini">${head}<tbody>
 ${pretaxRow}
 ${r(`과세표준${t.loss > 0 ? ' (이월결손금 차감)' : ''}`, 'taxBase')}
@@ -277,7 +275,7 @@ ${taxNote(t, unit)}`;
     const diff = (a, c, color) => { const d = c - a; return `<td class="${color ? (d < 0 ? 'down' : d > 0 ? 'up' : '') : ''}">${d === 0 ? '-' : (d > 0 ? '+' : '−') + Fmt.wonUnit(Math.abs(d), unit)}</td>`; };
     const r = (label, a, c, cls, color) => `<tr class="${cls || ''}"><td>${label}</td><td class="${a < 0 ? 'neg' : ''}">${Fmt.wonUnit(a, unit)}</td><td class="${c < 0 ? 'neg' : ''}">${Fmt.wonUnit(c, unit)}</td>${diff(a, c, color !== false)}</tr>`;
     const items = x.items.map(it => `<li>${esc(it.label)} <span>지출 ${Fmt.wonUnit(it.amount, unit)} → 인정 예상 <b>${Fmt.wonUnit(it.allowed, unit)}</b></span></li>`).join('');
-    const pending = x.pending && x.pending.length ? `<p class="tax-note">검토 중(미반영): ${x.pending.map(e => `${esc(e.label)} ${Fmt.man(e.amount)}`).join(', ')} — 비용 인정 여부 확인 후 반영합니다.</p>` : '';
+    const pending = x.pending && x.pending.length ? `<p class="tax-note">검토 중(미반영): ${x.pending.map(e => `${esc(e.label)} ${Fmt.man(e.amount)}`).join(', ')}</p>` : '';
     return `<table class="mini"><thead><tr><th>구분 <small>(연환산 기준)</small></th><th>반영 전</th><th>반영 후</th><th>차이</th></tr></thead><tbody>
 ${r('세전이익', b.a.pretax, x.pretaxAfter, '', false)}
 <tr><td>(−) 추가 비용 인정 예상액</td><td>-</td><td>${Fmt.wonUnit(x.total, unit)}</td><td></td></tr>
@@ -286,10 +284,10 @@ ${t.hasCredit ? r(`(−) ${esc(t.creditLabel)}`, A.creditAmt, B.creditAmt) : ''}
 ${r('지방소득세 (10%)', A.local, B.local)}
 ${r('예상 세액 합계 (산출 기준)', A.total, B.total, 'total')}
 </tbody></table>
-<div class="saving"><div class="lbl">추정 절세 효과</div><div class="big">약 ${Fmt.man(x.saved)} <small>감소 (추정)</small></div><div class="sub">지출 ${Fmt.man(x.spend)} 중 비용 인정 예상 ${Fmt.man(x.total)} 반영 · 인정액 100원당 세금 약 ${x.marginal.toFixed(0)}원 감소 · 세금을 뺀 실제 부담 약 ${Fmt.man(x.netCost)}</div><ul class="items">${items}</ul></div>
+<div class="saving"><div class="lbl">추정 절세 효과</div><div class="big">약 ${Fmt.man(x.saved)} <small>감소 (추정)</small></div><div class="sub">지출 ${Fmt.man(x.spend)} 중 비용 인정 예상 ${Fmt.man(x.total)} 반영 · 세금을 뺀 실제 부담 약 ${Fmt.man(x.netCost)}</div><ul class="items">${items}</ul></div>
 ${bracketBox(analysis)}
 ${pending}
-<p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) 추정치입니다. 추가 비용은 실제 지출·증빙과 세무상 인정 요건을 갖춰야 하며, 결산 시 인정 금액이 달라질 수 있습니다. 기납부세액은 반영하지 않았습니다.</p>`;
+<p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) 추정치입니다. 추가 비용은 실제 지출·증빙이 있어야 하며 결산 시 인정 금액이 달라질 수 있습니다.</p>`;
   }
 
   function planBlock(model) {
@@ -309,7 +307,7 @@ ${pending}
     const taxCol = options.showTax ? `<div><h3 class="sec">예상 세액과 계산 근거 <small>${analysis.tax.entity === 'indiv' ? '종합소득세' : '법인세'} + 지방소득세 · 추정</small></h3>${taxTable(analysis, unit)}</div>` : '';
     const planCol = `<div><h3 class="sec">연말까지 확인할 사항 및 향후 관리계획</h3>${planBlock(model)}</div>`;
     const blockB = `<div class="two-col${options.showTax ? '' : ' single'}">${taxCol}${planCol}</div>
-  <div class="disclaimer">본 보고서는 보고일 현재 장부를 기준으로 한 가결산 추정치이며, 실제 결산·세액은 기말 결산과 세무조정 결과에 따라 달라질 수 있습니다. 중요한 결정 전에는 담당자와 상의해 주세요.</div>`;
+  <div class="disclaimer">보고일 현재 장부 기준 가결산 추정치입니다. 실제 결산·세액은 달라질 수 있으니 중요한 결정 전에는 담당자와 상의해 주세요.</div>`;
     if (!split) return `<section class="page p2">${header(model, '세무 진단 및 향후 관리계획', 'Ⅱ')}${blockA}${blockB}${footer(model, pageNo, total)}</section>`;
     return `<section class="page p2">${header(model, '세무 진단 및 향후 관리계획', 'Ⅱ')}${blockA}${footer(model, pageNo, total)}</section>
 <section class="page p2 cont">${header(model, '세무 진단 및 향후 관리계획 (계속)', 'Ⅱ')}${blockB}${footer(model, pageNo + 1, total)}</section>`;
