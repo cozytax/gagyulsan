@@ -8,6 +8,7 @@ window.CONFIG = {
   reportTitle: '가결산 보고서',
   reportTitleOptions: ['가결산 보고서', '중간결산 보고서', '경영성과 보고서'],
   footnote: '본 보고서는 보고일 현재의 결산내역을 기초로 작성되었습니다.',
+  coverDefault: true,                 // 표지 포함 기본값 (직원이 체크를 바꾸면 그 브라우저에 기억됨)
   // 접속 암호 (인터넷에 올렸을 때 외부인이 쓰지 못하게). 빈칸이면 암호 없음.
   accessCode: '',
 

@@ -296,7 +296,7 @@ ${e.amount && n.note ? `<div class="r3">${escA(n.note)}</div>` : ''}
     $('preparer').value = pref.get('preparer', '');
     $('date').value = todayISO();
     $('unit').value = pref.get('unit', '1');
-    $('cover').checked = pref.get('cover', '0') === '1';
+    $('cover').checked = pref.get('cover', C.coverDefault ? '1' : '0') === '1';
 
     const drop = $('drop'), input = $('fileInput');
     drop.onclick = () => input.click();
