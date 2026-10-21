@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-<link rel="stylesheet" href="css/app.css?v=16">
-<link rel="stylesheet" href="css/report.css?v=16">
+<link rel="stylesheet" href="css/app.css?v=18">
+<link rel="stylesheet" href="css/report.css?v=18">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
@@ -74,7 +74,8 @@
     <div id="cmFreeWrap" style="display:none">
       <textarea id="cmFree" rows="6" placeholder="자유롭게 작성합니다. 줄바꿈 그대로 출력됩니다."></textarea>
     </div>
-    <p class="hint">보고서 2쪽 상단 '담당자 종합 의견' 상자에 들어갑니다. 비운 항목은 출력되지 않습니다.</p>
+    <div id="layoutWarn" class="warnbox"></div>
+    <p class="hint">보고서 2쪽 상단 '담당자 종합 의견' 상자에 들어갑니다. 비운 항목은 출력되지 않습니다. 길어지면 진단 포인트와 세액 부분이 다음 장으로 넘어갑니다(세 칸 합쳐 10줄 안팎 권장).</p>
 
     <h2><span class="step">6</span>연말 확인사항·관리계획 <small class="h2sub">자동 생성 · 수정 가능</small></h2>
     <label class="ta-label" for="planClient">거래처 확인사항 <small>한 줄에 하나, " | 기한" 형식으로 기한 표시</small> <button id="planResetClient" class="btn small link">자동으로 되돌리기</button></label>
@@ -96,10 +97,10 @@
 
 <div id="toast" class="toast"></div>
 
-<script src="js/config.js?v=16"></script>
-<script src="js/parser.js?v=16"></script>
-<script src="js/analysis.js?v=16"></script>
-<script src="js/report.js?v=16"></script>
-<script src="js/app.js?v=16"></script>
+<script src="js/config.js?v=18"></script>
+<script src="js/parser.js?v=18"></script>
+<script src="js/analysis.js?v=18"></script>
+<script src="js/report.js?v=18"></script>
+<script src="js/app.js?v=18"></script>
 </body>
 </html>

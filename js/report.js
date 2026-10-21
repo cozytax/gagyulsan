@@ -301,16 +301,20 @@ ${pending}
 </div>`;
   }
 
+  /* split: 0 = 한 쪽, 1 = 세액·관리계획을 다음 쪽으로, 2 = 진단 포인트부터 다음 쪽으로 */
   function page2(model, pageNo, total, split) {
     const { analysis, options } = model; const unit = options.unit || 1;
-    const blockA = `${summaryBlock(analysis)}${opinionBlock(model)}${pointsBlock(analysis)}`;
+    const head = summaryBlock(analysis) + opinionBlock(model);
+    const pts = pointsBlock(analysis);
+    const blockA = head + pts;
     const taxCol = options.showTax ? `<div><h3 class="sec">예상 세액과 계산 근거 <small>${analysis.tax.entity === 'indiv' ? '종합소득세' : '법인세'} + 지방소득세 · 추정</small></h3>${taxTable(analysis, unit)}</div>` : '';
     const planCol = `<div><h3 class="sec">연말까지 확인할 사항 및 향후 관리계획</h3>${planBlock(model)}</div>`;
     const blockB = `<div class="two-col${options.showTax ? '' : ' single'}">${taxCol}${planCol}</div>
   <div class="disclaimer">보고일 현재 장부 기준 가결산 추정치입니다. 실제 결산·세액은 달라질 수 있으니 중요한 결정 전에는 담당자와 상의해 주세요.</div>`;
     if (!split) return `<section class="page p2">${header(model, '세무 진단 및 향후 관리계획', 'Ⅱ')}${blockA}${blockB}${footer(model, pageNo, total)}</section>`;
-    return `<section class="page p2">${header(model, '세무 진단 및 향후 관리계획', 'Ⅱ')}${blockA}${footer(model, pageNo, total)}</section>
-<section class="page p2 cont">${header(model, '세무 진단 및 향후 관리계획 (계속)', 'Ⅱ')}${blockB}${footer(model, pageNo + 1, total)}</section>`;
+    const first = split >= 2 ? head : blockA, rest = split >= 2 ? pts + blockB : blockB;
+    return `<section class="page p2">${header(model, '세무 진단 및 향후 관리계획', 'Ⅱ')}${first}${footer(model, pageNo, total)}</section>
+<section class="page p2 cont">${header(model, '세무 진단 및 향후 관리계획 (계속)', 'Ⅱ')}${rest}${footer(model, pageNo + 1, total)}</section>`;
   }
 
   /** options: { unit, showTax, cover, split } */
@@ -318,7 +322,7 @@ ${pending}
     const o = model.options || {};
     const total = (o.cover ? 1 : 0) + 2 + (o.split ? 1 : 0);
     let n = o.cover ? 2 : 1;
-    container.innerHTML = (o.cover ? cover(model) : '') + page1(model, n, total) + page2(model, n + 1, total, !!o.split);
+    container.innerHTML = (o.cover ? cover(model) : '') + page1(model, n, total) + page2(model, n + 1, total, o.split | 0);
   }
 
   window.Report = { render, periodText, koDate };
