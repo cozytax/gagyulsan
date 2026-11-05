@@ -259,7 +259,49 @@
       extra = { items: applied, pending, total: allowedTotal, spend: spendTotal, after, saved, marginal: saved / allowedTotal * 100, netCost: spendTotal - saved, pretaxAfter: b.a.pretax - allowedTotal };
     }
     const bracket = annual.taxBase > 0 ? { list: bt.list, annual: bracketInfo(annual.taxBase, bt.list), actual: actual.taxBase > 0 ? bracketInfo(actual.taxBase, bt.list) : null, after: extra && extra.after.taxBase > 0 ? bracketInfo(extra.after.taxBase, bt.list) : null } : null;
-    return { entity, tableYear: bt.year, tableExact: bt.exact, creditType: opts.creditType || 'none', creditRate: credit * 100, creditAmount: creditFixed, creditLabel, hasCredit, loss, actual, annual, extra, pendingExtras: pending, allExtras: extras, bracket, noTax: actual.computed <= 0 && annual.computed <= 0 };
+    const saving = buildSaving(b, annual, calc, bt, loss, entity, opts);
+    return { entity, tableYear: bt.year, tableExact: bt.exact, creditType: opts.creditType || 'none', creditRate: credit * 100, creditAmount: creditFixed, creditLabel, hasCredit, loss, actual, annual, extra, pendingExtras: pending, allExtras: extras, bracket, saving, noTax: actual.computed <= 0 && annual.computed <= 0 };
+  }
+
+  /* ---------- 절세 제안 (Ⅲ쪽): 노란우산공제 소득공제 → 연금계좌(IRP) 세액공제 → 고향사랑기부금 세액공제 순으로 반영 ----------
+   * 개인사업자 + 12개월 환산 예상 세액이 config.savingProposal.minTax 이상일 때만. 전부 '12개월 환산 기준' 단순 추정.
+   * 사업소득금액·종합소득금액은 (연환산 세전이익 − 이월결손금)으로 갈음한다(다른 소득 미반영).
+   */
+  function buildSaving(b, annual, calc, bt, loss, entity, opts) {
+    const S = C.savingProposal; if (!S) return null;
+    if (entity !== 'indiv' || !(annual.total >= S.minTax) || annual.taxBase <= 0) return null;
+    const income = Math.max(0, b.a.pretax - loss);
+    // 1) 노란우산공제: 사업소득금액 구간별 한도, 과세표준을 넘지 않게
+    const tier = S.yellowUmbrella.tiers.find(t => income <= t.upTo) || S.yellowUmbrella.tiers[S.yellowUmbrella.tiers.length - 1];
+    const yuAmt = Math.min(tier.limit, annual.taxBase);
+    const afterYu = calc(b.a.pretax - yuAmt);
+    const yuSaved = annual.total - afterYu.total;
+    const marginal = annual.taxBase > 0 ? bracketInfo(annual.taxBase, bt.list).rate : 0;   // 현재 구간 세율(%)
+    // 2) 고향사랑기부금: 10만원까지 100/110 세액공제(지방소득세 포함 전액 환급). 사실상 비용 0이라 먼저 반영
+    const htAmt = S.hometown.amount;
+    const htCredit = Math.min(Math.round(Math.min(htAmt, S.hometown.fullCreditUpTo) * 100 / 110), afterYu.national);
+    const htSaved = htCredit * (1 + C.localTaxRate);
+    // 3) 연금계좌(IRP): 납입액 × 12%(종합소득금액 4,500만 이하 15%). 남은 국세보다 공제가 크면 필요한 만큼만 납입 제안(만원 단위 올림)
+    const pRate = income <= S.pension.incomeThreshold ? S.pension.rateHigh : S.pension.rateLow;
+    const remain = afterYu.national - htCredit;
+    let irpAmt = S.pension.limit;
+    if (irpAmt * pRate > remain) irpAmt = Math.max(0, Math.min(S.pension.limit, Math.ceil(remain / pRate / 10000) * 10000));
+    const irpCredit = Math.min(Math.round(irpAmt * pRate), remain);
+    const irpSaved = irpCredit * (1 + C.localTaxRate);
+    const national = afterYu.national - irpCredit - htCredit;
+    const after = { taxBase: afterYu.taxBase, computed: afterYu.computed, creditAmt: afterYu.creditAmt, national, local: national * C.localTaxRate, total: national * (1 + C.localTaxRate), irpCredit, htCredit };
+    const totalPay = yuAmt + irpAmt + htAmt;
+    const totalSaved = annual.total - after.total;
+    // 같은 돈을 비용으로 썼을 때의 세금 감소(비교용)
+    const expenseSaved = annual.total - calc(b.a.pretax - totalPay).total;
+    if (totalSaved <= 0) return null;
+    return {
+      income, marginal, marginalAll: marginal * (1 + C.localTaxRate),
+      yu: { amount: yuAmt, limit: tier.limit, saved: yuSaved, tier },
+      irp: { amount: irpAmt, rate: pRate * 100, rateAll: pRate * 100 * (1 + C.localTaxRate), credit: irpCredit, saved: irpSaved },
+      ht: { amount: htAmt, credit: htCredit, saved: htSaved, gift: Math.round(htAmt * S.hometown.giftRate) },
+      before: annual, after, totalPay, totalSaved, expenseSaved, effRate: totalSaved / totalPay * 100,
+    };
   }
 
   /* ---------- 진단 문구: 사실 한 문장 + 조치 한 구절. 대표가 읽는 글이라 짧게. ---------- */

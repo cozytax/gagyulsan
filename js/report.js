@@ -342,11 +342,112 @@ ${pending}
     return `<section class="page p2${cont ? ' cont' : ''}">${header(model, `세무 진단 및 향후 관리계획${cont ? ' (계속)' : ''}`, 'Ⅱ')}${unitsHtml(model, units, info)}${footer(model, pageNo, total)}</section>`;
   }
 
+  /* ---------- Ⅲ쪽: 절세 제안 — 노란우산공제·연금계좌(IRP)·고향사랑기부금 ---------- */
+  function hasSavingPage(model) {
+    const o = model.options || {}; const t = model.analysis && model.analysis.tax;
+    return !!(o.showSaving !== false && t && t.saving);
+  }
+  function savingPage(model, pageNo, total) {
+    const { analysis, options, meta } = model; const t = analysis.tax; const sv = t.saving; const b = analysis.base;
+    const S = C.savingProposal; const unit = options.unit || 1;
+    const est = b.factor !== 1;
+    const man1 = v => { const a = Math.abs(v); return a >= 1e8 ? Fmt.man(v) : `${(a / 1e4).toFixed(a % 1e4 ? 1 : 0).replace(/\.0$/, '')}만원`; };
+    const pct1 = v => `${(+v).toFixed(1).replace(/\.0$/, '')}%`;
+    const bigMan = v => v >= 1e8 ? `${(v / 1e8).toFixed(v % 1e8 ? 1 : 0).replace(/\.0$/, '')}억` : `${Math.round(v / 1e4).toLocaleString('ko-KR')}만`;
+    const rd = meta.reportDate instanceof Date ? meta.reportDate : new Date();
+    const late = rd.getFullYear() > b.year;                                   // 보고일이 사업연도를 지남 → 올해분 납입 불가
+    const yr = b.year;
+    const thisMonth = late ? null : Math.min(12, Math.max(rd.getFullYear() === yr ? rd.getMonth() + 1 : 1, (b.endMonth || 0) + 1));
+    const diffCell = d => `<td class="${d < 0 ? 'down' : d > 0 ? 'up' : ''}">${Math.round(d) === 0 ? '-' : (d > 0 ? '▲ ' : '▼ ') + Fmt.wonUnit(Math.abs(d), unit)}</td>`;
+    const row = (label, a, c, cls) => `<tr class="${cls || ''}"><td>${label}</td><td>${Fmt.wonUnit(a, unit)}</td><td>${Fmt.wonUnit(c, unit)}</td>${diffCell(c - a)}</tr>`;
+    const A = sv.before, B = sv.after;
+    const tiers = S.yellowUmbrella.tiers;
+    const tierTxt = tiers.map((tr, i) => { const lo = i > 0 ? tiers[i - 1].upTo : 0; const amt = `${tr.limit / 1e4}만`; return isFinite(tr.upTo) ? `${lo ? `${bigMan(lo)}~` : ''}${bigMan(tr.upTo)} ${amt}` : `${bigMan(lo)} 초과 ${amt}`; }).join(' · ');
+    const incomeTxt = `사업소득금액 약 ${Fmt.man(sv.income)}${est ? '(연환산)' : ''}`;
+    const steps = late ? [
+      [`노란우산공제 가입(중소기업중앙회 홈페이지·거래 은행, 사업자등록증 지참) 후 연 ${Fmt.man(sv.yu.amount)} 납입 계획 수립`, `${yr + 1}년 1월~`],
+      [`IRP 계좌 개설 후 연 ${Fmt.man(sv.irp.amount)} 납입(월 ${Fmt.man(Math.round(sv.irp.amount / 12))} 자동이체)`, `${yr + 1}년 1월~`],
+      [`고향사랑e음(ilovegohyang.go.kr)·농협 창구에서 ${Fmt.man(sv.ht.amount)} 기부 후 답례품 선택`, `${yr + 1}년 중`],
+      ['가입·납입·기부 내역만 알려주세요. 증빙은 신고 때 저희가 확인해 반영합니다.', '가입 직후'],
+    ] : [
+      [`노란우산공제 가입(중소기업중앙회·거래 은행, 사업자등록증 지참) 후 ${Fmt.man(sv.yu.amount)} 납입(일시납·분할납은 가입 기관 확인)`, `${thisMonth}월 중`],
+      [`IRP 계좌 개설 후 올해 납입액이 ${Fmt.man(sv.irp.amount)}이 되도록 입금. 연금저축이 이미 있다면 합산 ${Fmt.man(S.pension.limit)}까지`, '12월 31일까지'],
+      [`고향사랑e음(ilovegohyang.go.kr)·농협 창구에서 ${Fmt.man(sv.ht.amount)} 기부(주소지 외 지자체) 후 답례품 선택`, '12월 31일까지'],
+      ['가입·납입·기부 내역만 알려주세요. 증빙은 내년 5월 신고 때 저희가 확인해 반영합니다. 내년부터는 자동이체로.', '가입 직후'],
+    ];
+    const prog = (name, sub, body) => `<div class="sv-box"><h4>${name}<small>${sub}</small></h4><dl>${body}</dl></div>`;
+    const dt = (k, v, cls) => `<dt>${k}</dt><dd class="${cls || ''}">${v}</dd>`;
+    const yuEff = sv.yu.saved / sv.yu.amount * 100;
+    const yuCross = Math.abs(yuEff - sv.marginalAll) >= 0.1;          // 소득공제로 세율 구간이 내려가면 실효율이 한계세율과 달라짐
+    const yuRateTxt = yuCross ? `실효 ${pct1(yuEff)}(구간 하락 반영)` : `${pct1(sv.marginalAll)}(${sv.marginal}%+지방)`;
+    const yuWarn = isFinite(sv.yu.tier.upTo) ? `사업소득금액이 ${bigMan(sv.yu.tier.upTo)}원을 넘기면 한도가 줄어듭니다.` : '사업소득금액이 1억원을 넘어 한도가 200만원입니다.';
+    return `
+<section class="page p3">
+  ${header(model, '절세 제안 — 노란우산공제·연금계좌(IRP)·고향사랑기부금', 'Ⅲ')}
+  <div class="summary sv-lead"><div class="lbl">절 세 제 안</div>
+    <p>비용으로 쓰지 않고도 세금을 줄일 수 있습니다. 노란우산공제·연금계좌(IRP)에 연 <b>${Fmt.man(sv.yu.amount + sv.irp.amount)}</b>을 넣고 고향사랑기부금 <b>${Fmt.man(sv.ht.amount)}</b>을 기부하면 세금이 약 <b>${Fmt.man(sv.totalSaved)}</b> 줄고, 넣은 돈은 본인 자산으로 남습니다.</p>
+    <div class="note">※ Ⅱ쪽 관리계획의 "공제·감면 적용 검토" 중 지금 바로 실행할 수 있는 세 가지입니다. ${late ? `보고일이 ${yr}년을 지나 ${yr}년분 납입은 끝났으므로 ${yr + 1}년 계획으로 참고해 주세요.` : '올해 이미 가입하셨다면 아래 한도까지 증액을, 아직이라면 연내 가입을 권해드립니다(12월 31일까지 납입분이 올해 공제).'}</div>
+  </div>
+  <div class="sv-cards">
+    <div class="sv-card"><div class="k">노란우산공제 <small>소득공제</small></div><div class="v">${man1(sv.yu.saved)}<small>절세</small><i>추정</i></div><div class="s">연 <b>${Fmt.man(sv.yu.amount)}</b> 납입 · 세율 ${yuRateTxt} 적용</div></div>
+    <div class="sv-card"><div class="k">연금계좌(IRP) <small>세액공제</small></div><div class="v">${man1(sv.irp.saved)}<small>절세</small><i>추정</i></div><div class="s">연 <b>${Fmt.man(sv.irp.amount)}</b> 납입 · ${pct1(sv.irp.rateAll)}(${sv.irp.rate}%+지방) 세액공제</div></div>
+    <div class="sv-card"><div class="k">고향사랑기부금 <small>세액공제</small></div><div class="v">${man1(sv.ht.saved)}<small>절세</small><i>추정</i></div><div class="s"><b>${Fmt.man(sv.ht.amount)}</b> 기부 · 전액 돌려받고 답례품 약 ${Fmt.man(sv.ht.gift)}</div></div>
+    <div class="sv-card total"><div class="k">합계 <small>세 제도 모두 활용 시</small></div><div class="v">${man1(sv.totalSaved)}<small>절세</small><i>추정</i></div><div class="s">연 <b>${Fmt.man(sv.totalPay)}</b> 납입 · 첫해 ${pct1(sv.effRate)} 환급 효과</div></div>
+  </div>
+  <div class="two-col sv-cols">
+    <div>
+      <h3 class="sec">제도별 요약 <small>${esc(S.asOf)} 기준</small></h3>
+      ${prog('노란우산공제', '소기업·소상공인 공제부금 · 중소기업중앙회',
+        dt('무엇', '사업자 본인의 퇴직금 적립 제도. 납입액이 <b>소득공제</b>됩니다.') +
+        dt('한도', `${incomeTxt} → <b>연 ${Fmt.man(sv.yu.limit)}</b> <small>(사업소득금액 ${tierTxt})</small>`) +
+        dt('효과', `${Fmt.man(sv.yu.amount)} × ${yuCross ? pct1(yuEff) + '(실효)' : pct1(sv.marginalAll)} = <b>${man1(sv.yu.saved)}</b> 감소`) +
+        dt('덤', '복리 이자, 압류·양도 금지. 폐업·퇴임 시 수령(퇴직소득 과세).') +
+        dt('주의', `폐업 전 임의해지 시 공제받은 금액에 기타소득세 16.5%. ${yuWarn}`, 'warn'))}
+      ${prog('연금계좌(IRP)', '개인형퇴직연금 · 은행·증권사',
+        dt('무엇', '노후자금 계좌. 납입액의 일정 비율을 <b>세액공제</b>로 세금에서 바로 뺍니다. 개인사업자도 가입 가능.') +
+        dt('한도', `연금저축 ${Fmt.man(S.pension.savingsLimit)}, IRP 합산 <b>${Fmt.man(S.pension.limit)}</b>(IRP 하나로 가능). 기존 연금저축 납입액은 합산 한도에서 차감.`) +
+        dt('효과', `${Fmt.man(sv.irp.amount)} × ${pct1(sv.irp.rateAll)} = <b>${man1(sv.irp.saved)}</b> 감소 <small>(종합소득금액 ${Fmt.man(S.pension.incomeThreshold)} ${sv.irp.rate === S.pension.rateHigh * 100 ? `이하라 ${S.pension.rateHigh * 100}%` : `초과라 ${S.pension.rateLow * 100}%`} 적용)</small>`) +
+        dt('수령', '55세 이후 연금으로 받으면 연금소득세 3.3~5.5%.') +
+        dt('주의', `55세 전 중도해지 시 기타소득세 16.5% — 받은 공제(${pct1(sv.irp.rateAll)})보다 많이 토해냅니다. 당장 쓸 돈은 넣지 마세요.`, 'warn'))}
+      ${prog('고향사랑기부금', '주소지 외 지방자치단체 기부 · 고향사랑e음',
+        dt('무엇', `주소지 외 지자체에 기부하면 <b>${Fmt.man(S.hometown.fullCreditUpTo)}까지 전액 세액공제</b>되고 기부액의 ${Math.round(S.hometown.giftRate * 100)}% 상당 답례품(지역 특산품)을 받습니다.`) +
+        dt('효과', `${Fmt.man(sv.ht.amount)} 기부 → 세금 <b>${Fmt.man(sv.ht.saved)}</b> 감소 + 답례품 약 ${Fmt.man(sv.ht.gift)} = 답례품만큼 이득.`) +
+        dt('주의', `사업자는 ${Fmt.man(S.hometown.fullCreditUpTo)} 초과분이 세액공제가 아니라 필요경비(장부 반영)입니다. 본인 주소지 지자체에는 기부 불가.`, 'warn'))}
+    </div>
+    <div>
+      <h3 class="sec">적용 전후 예상 세금 <small>${est ? '12개월 환산 기준' : '연간 기준'}</small></h3>
+      <table class="mini"><thead><tr><th>구분</th><th>현재</th><th>세 제도 적용 후</th><th>차이</th></tr></thead><tbody>
+${row('과세표준', A.taxBase, B.taxBase)}
+${row('산출세액', A.computed, B.computed)}
+${t.hasCredit ? row(`(−) ${esc(t.creditLabel.split(' (')[0])}`, -A.creditAmt, -B.creditAmt) : ''}
+<tr><td>(−) 연금계좌 공제</td><td>0</td><td>−${Fmt.wonUnit(B.irpCredit, unit)}</td>${diffCell(-B.irpCredit)}</tr>
+<tr><td>(−) 고향사랑기부금 공제</td><td>0</td><td>−${Fmt.wonUnit(B.htCredit, unit)}</td>${diffCell(-B.htCredit)}</tr>
+${row('종합소득세(국세)', A.national, B.national)}
+${row(`지방소득세(${Math.round(C.localTaxRate * 100)}%)`, A.local, B.local)}
+${row('예상 세금 합계', A.total, B.total, 'total')}
+      </tbody></table>
+      <p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) Ⅱ쪽의 ${est ? '12개월 환산 ' : ''}과세표준(${sv.marginal}% 구간)에 노란우산 ${Fmt.man(sv.yu.amount)} 소득공제, 연금계좌 ${Fmt.man(sv.irp.amount)}×${sv.irp.rate}%·고향사랑기부금 ${Fmt.man(sv.ht.amount)} 세액공제를 반영한 단순 추정.</p>
+      <h3 class="sec">같은 ${Fmt.man(sv.totalPay)}, 비용으로 쓸 때와 비교</h3>
+      <div class="sv-cmp">
+        <div class="a"><div class="t">비용으로 지출</div><div class="v">약 ${man1(sv.expenseSaved)}<small>세금 감소</small></div><p>남는 돈 <b>0원</b> — 쓴 돈은 사라집니다. 꼭 필요한 지출일 때만.</p></div>
+        <div class="b"><div class="t">공제 상품에 납입·기부</div><div class="v">약 ${man1(sv.totalSaved)}<small>세금 감소</small></div><p>남는 돈 <b>${Fmt.man(sv.yu.amount + sv.irp.amount)} + 이자·운용수익</b>(+답례품). 수령 시 낮은 세율로 과세.</p></div>
+      </div>
+      <div class="sv-order">둘은 경쟁 관계가 아닙니다. Ⅱ쪽에서 말씀드린 누락 경비는 비용으로 처리하고, 그래도 남는 돈은 공제 상품에 넣어 두는 것이 순서입니다.</div>
+    </div>
+  </div>
+  <h3 class="sec">실행 순서 <small>${late ? `${yr + 1}년 계획` : '연말까지'}</small></h3>
+  <ol class="sv-steps">${steps.map(([tx, due]) => `<li>${esc(tx)} <span class="due">${esc(due)}</span></li>`).join('')}</ol>
+  <div class="disclaimer">한도·세율은 ${esc(S.asOf)} 현재 법령 기준이며 다른 소득·소득공제는 반영하지 않은 추정입니다. 노란우산·연금계좌는 세금을 없애는 것이 아니라 수령 시점으로 미루는 것이므로 중도해지 가능성이 있는 자금은 넣지 않는 것이 좋습니다. 상품 조건·납입 방식은 가입 전 해당 기관에서 확인해 주세요.</div>
+  ${footer(model, pageNo, total)}
+</section>`;
+  }
+
   /** groups: 2쪽 단위를 쪽별로 나눈 배열(app.js 가 높이를 재서 만든다). 없으면 한 쪽에 전부. */
   function compose(model, groups) {
     const o = model.options || {}; const all = page2Units(model);
     if (!groups) groups = [all];
-    const total = (o.cover ? 1 : 0) + 1 + groups.length;
+    const sv = hasSavingPage(model);
+    const total = (o.cover ? 1 : 0) + 1 + groups.length + (sv ? 1 : 0);
     let n = o.cover ? 2 : 1;
     const opIdx = all.map((u, i) => u.type === 'op' ? i : -1).filter(i => i >= 0);
     const ptIdx = all.map((u, i) => u.type === 'pt' ? i : -1).filter(i => i >= 0);
@@ -357,10 +458,11 @@ ${pending}
       html += page2Html(model, g, n + 1 + gi, total, gi > 0, info);
       idx += g.length;
     });
+    if (sv) html += savingPage(model, total, total);
     return html;
   }
 
   function render(container, model, groups) { container.innerHTML = compose(model, groups); }
 
-  window.Report = { render, compose, page2Units, page2Html, periodText, koDate };
+  window.Report = { render, compose, page2Units, page2Html, hasSavingPage, periodText, koDate };
 })();

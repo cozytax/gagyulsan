@@ -229,7 +229,8 @@ ${e.amount && n.note ? `<div class="r3">${escA(n.note)}</div>` : ''}
       dateText: isoToKo($('date').value || todayISO()), footnote: C.footnote,
       comment: readComment(), plan: currentPlan(),
     };
-    const options = { unit: +$('unit').value || 1, showTax: $('showTax').checked, cover: $('cover').checked };
+    const options = { unit: +$('unit').value || 1, showTax: $('showTax').checked, cover: $('cover').checked, showSaving: $('showSaving').checked };
+    meta.reportDate = $('date').value ? new Date($('date').value + 'T00:00:00') : new Date();
     return { meta, analysis: state.analysis, options };
   }
   function renderReport() {
@@ -282,7 +283,7 @@ ${e.amount && n.note ? `<div class="r3">${escA(n.note)}</div>` : ''}
       `기준기간: ${window.Report.periodText(b)}${b.factor !== 1 ? ' → 12개월 환산' : ''}`,
       `사업자 구분: ${t.entity === 'indiv' ? '개인(종합소득세)' : '법인(법인세)'} · 업종: ${$('industry').selectedOptions[0].textContent}`,
       `공제·감면: ${t.hasCredit ? t.creditLabel : '없음'} · 추가 비용 반영: ${t.extra ? Fmt.man(t.extra.total) : '없음'}${t.pendingExtras.length ? ` (검토 필요 ${t.pendingExtras.length}건 미반영)` : ''}`,
-      `담당자: ${$('preparer').value.trim()} · 담당자 의견: ${$('commentMode').value === 'none' ? '없음' : '포함'} · 출력: A4 ${$('report').querySelectorAll('.page').length}장`,
+      `담당자: ${$('preparer').value.trim()} · 담당자 의견: ${$('commentMode').value === 'none' ? '없음' : '포함'} · 출력: A4 ${$('report').querySelectorAll('.page').length}장${t.saving && $('showSaving').checked ? ' (절세 제안 쪽 포함)' : ''}`,
     ];
     if (state.layoutOverflow) lines.push('', '⚠ 한 문단이 A4 한 쪽보다 길어 잘립니다.');
     if (errs.length) lines.push('', '⚠ 데이터 오류 (확인 후 출력 권장):', ...errs.map(i => ' - ' + i.text));
@@ -325,6 +326,8 @@ ${e.amount && n.note ? `<div class="r3">${escA(n.note)}</div>` : ''}
     document.addEventListener('dragover', e => e.preventDefault()); document.addEventListener('drop', e => e.preventDefault());
 
     ['title', 'company', 'firm', 'preparer', 'unit', 'showTax'].forEach(id => $(id).addEventListener('input', () => { pref.set(id, $(id).value); renderReport(); }));
+    $('showSaving').checked = pref.get('showSaving', '1') === '1';
+    $('showSaving').addEventListener('change', () => { pref.set('showSaving', $('showSaving').checked ? '1' : '0'); renderReport(); });
     $('date').addEventListener('input', recompute);
     $('cover').addEventListener('change', () => { pref.set('cover', $('cover').checked ? '1' : '0'); renderReport(); });
     ['cmOverall', 'cmFocus', 'cmPlan', 'cmFree'].forEach(id => $(id).addEventListener('input', renderReport));

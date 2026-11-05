@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-<link rel="stylesheet" href="css/app.css?v=19">
-<link rel="stylesheet" href="css/report.css?v=19">
+<link rel="stylesheet" href="css/app.css?v=20">
+<link rel="stylesheet" href="css/report.css?v=20">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
@@ -43,8 +43,8 @@
     <p class="hint" style="margin:-4px 0 8px 104px">한 번 입력하면 이 PC 브라우저에 기억됩니다(다른 PC는 각자 입력).</p>
     <div class="field"><label for="date">보고일</label><input id="date" type="date"></div>
     <div class="field"><label for="unit">표 금액 단위</label><select id="unit"><option value="1">원</option><option value="1000">천원</option></select></div>
-    <div class="field"><label>출력 구성</label><div class="inline"><label class="inline"><input id="cover" type="checkbox" checked> 표지 포함(3장)</label><label class="inline"><input id="showTax" type="checkbox" checked> 예상 세액 표시</label></div></div>
-    <p class="hint">기본은 A4 2장(경영성과 요약 · 세무 진단 및 관리계획)입니다. 내용이 많으면 2장째가 문단 단위로 다음 장에 이어집니다.</p>
+    <div class="field"><label>출력 구성</label><div class="inline"><label class="inline"><input id="cover" type="checkbox" checked> 표지 포함(3장)</label><label class="inline"><input id="showTax" type="checkbox" checked> 예상 세액 표시</label><label class="inline"><input id="showSaving" type="checkbox" checked> 절세 제안 쪽</label></div></div>
+    <p class="hint">기본은 A4 2장(경영성과 요약 · 세무 진단 및 관리계획)입니다. 내용이 많으면 2장째가 문단 단위로 다음 장에 이어집니다. <b>절세 제안 쪽</b>(노란우산공제·IRP·고향사랑기부금)은 개인사업자이고 연환산 예상 세액이 100만원 이상일 때만 맨 뒤에 한 장 붙습니다.</p>
 
     <h2><span class="step">3</span>예상 세액 설정</h2>
     <div class="field"><label for="entity">사업자 구분</label><select id="entity"><option value="indiv">개인 (종합소득세)</option><option value="corp">법인 (법인세)</option></select></div>
@@ -97,10 +97,10 @@
 
 <div id="toast" class="toast"></div>
 
-<script src="js/config.js?v=19"></script>
-<script src="js/parser.js?v=19"></script>
-<script src="js/analysis.js?v=19"></script>
-<script src="js/report.js?v=19"></script>
-<script src="js/app.js?v=19"></script>
+<script src="js/config.js?v=20"></script>
+<script src="js/parser.js?v=20"></script>
+<script src="js/analysis.js?v=20"></script>
+<script src="js/report.js?v=20"></script>
+<script src="js/app.js?v=20"></script>
 </body>
 </html>
