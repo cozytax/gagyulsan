@@ -8,14 +8,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-<link rel="stylesheet" href="css/app.css?v=20">
-<link rel="stylesheet" href="css/report.css?v=20">
+<link rel="stylesheet" href="css/app.css?v=21">
+<link rel="stylesheet" href="css/report.css?v=21">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 <header class="topbar no-print">
   <img class="brand-logo" src="assets/logo_h_white.png" alt="편한세무회계" onerror="this.remove()">
-  <div class="brand">가결산 리포트<small>손익계산서 PDF → 12개월 환산 · 추이 · 세무 진단 · 관리계획</small></div>
+  <div class="brand">가결산 리포트<small>손익계산서 PDF → 연환산 · 추이 · 세무 진단 · 관리계획</small></div>
   <div class="spacer"></div>
   <span id="pageInfo" class="pageinfo"></span>
   <span id="busy" class="busy" style="display:none"></span>
@@ -86,7 +86,7 @@
     <h2><span class="step">7</span>읽어낸 숫자 확인 <button id="btnAddYear" class="btn small" style="float:right">연도 직접 추가</button></h2>
     <div id="datatbl"></div>
     <div id="details"></div>
-    <p class="hint">노란 칸은 손으로 고친 값, 회색 기울임은 PDF에 없어 계산한 값, 빨간 테두리 '미인식'은 PDF에서 못 읽어 0으로 계산 중인 값입니다. 숫자를 고치면 비율·차트·예상 세액이 바로 다시 계산됩니다.</p>
+    <p class="hint">노란 칸은 손으로 고친 값, 회색 기울임은 PDF에 없어 계산한 값, 빨간 테두리 '미인식'은 PDF에서 못 읽어 0으로 계산 중인 값입니다. 숫자를 고치면 비율·차트·예상 세액이 바로 다시 계산됩니다.<br><b>연간 영업 개월 수</b>는 연환산의 기준입니다(연환산 = 실적 ÷ 실적 개월 수 × 연간 영업 개월 수). 보통 12이고, 연중 개업이면 개업월~12월로 자동 계산됩니다(예: 4월 개업 → 9). 틀리면 고치고, 칸을 비우면 자동으로 돌아갑니다.</p>
   </aside>
 
   <main class="preview">
@@ -97,10 +97,10 @@
 
 <div id="toast" class="toast"></div>
 
-<script src="js/config.js?v=20"></script>
-<script src="js/parser.js?v=20"></script>
-<script src="js/analysis.js?v=20"></script>
-<script src="js/report.js?v=20"></script>
-<script src="js/app.js?v=20"></script>
+<script src="js/config.js?v=21"></script>
+<script src="js/parser.js?v=21"></script>
+<script src="js/analysis.js?v=21"></script>
+<script src="js/report.js?v=21"></script>
+<script src="js/app.js?v=21"></script>
 </body>
 </html>

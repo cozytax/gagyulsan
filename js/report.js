@@ -16,6 +16,9 @@
     return `${y.year}년 ${y.startMonth}월 1일 ~ ${y.endMonth}월 말 (${y.months}개월)`;
   }
   const shortPeriod = y => (y.months >= 12 || !y.startMonth) ? '연간' : `${y.startMonth}~${y.endMonth}월`;
+  // 연환산 표기: 보통 '12개월', 연중 개업이면 그 해 영업 개월 수(예: 4월 개업 → 9개월)
+  const fm = b => (b && b.fullMonths) || 12;
+  const annWord = b => fm(b) < 12 ? `연말까지 ${fm(b)}개월 환산` : '12개월 환산';
   const logoFoot = `<img src="assets/logo_h.png" alt="" onerror="this.remove()">`;
 
   /* ---------- 표지 (옵션) ---------- */
@@ -27,7 +30,7 @@
   <div class="body">
     <div class="fy">${b.year} 사업연도</div>
     <div class="title-band"><h1>${esc(meta.title)}</h1></div>
-    <div class="sub">기준기간 <span class="period">${esc(periodText(b))}</span>${analysis.rows.length > 1 ? `<br>${est ? '12개월 환산 추정 및 ' : ''}최근 ${analysis.rows.length}개년 비교 포함` : (est ? '<br>12개월 환산 추정 포함' : '')}</div>
+    <div class="sub">기준기간 <span class="period">${esc(periodText(b))}</span>${analysis.rows.length > 1 ? `<br>${est ? `${annWord(b)} 추정 및 ` : ''}최근 ${analysis.rows.length}개년 비교 포함` : (est ? `<br>${annWord(b)} 추정 포함` : '')}</div>
     <div class="company-box"><small>회 사 명</small>${esc(meta.company || '회사명 미입력')}</div>
     <div class="meta">보고일 &nbsp;${esc(meta.dateText)}${meta.preparer ? `<br>담당 &nbsp;${esc(meta.preparer)}` : ''}</div>
     <div class="firm"><img src="assets/logo_v.png" alt="${esc(meta.firm)}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><span style="display:none">${esc(meta.firm)}<small>TAX &amp; ACCOUNTING</small></span></div>
@@ -81,10 +84,10 @@
     const unit = options.unit || 1;
     const prevRows = rows.slice(0, -1);
     const head = ['<th>항목</th>']
-      .concat(prevRows.map(y => `<th>${y.year}년<small>${y.months < 12 ? `${y.months}개월 실적` : '연간 실적'}</small></th>`))
+      .concat(prevRows.map(y => `<th>${y.year}년<small>${y.months < 12 ? `${y.months}개월 ${y.factor === 1 ? '영업 ' : ''}실적` : '연간 실적'}</small></th>`))
       .concat(same ? [`<th>${same.year}년 동기<small>${shortPeriod(b)} 실적</small></th>`] : [])
       .concat([`<th>${b.year}년 실적<small>${shortPeriod(b)} (${b.months}개월) 실제</small></th>`])
-      .concat(est ? [`<th>${b.year}년 연환산<small>12개월 추정</small></th>`] : [])
+      .concat(est ? [`<th>${b.year}년 연환산<small>${fm(b) < 12 ? `연말까지 ${fm(b)}개월` : '12개월'} 추정</small></th>`] : [])
       .concat(analysis.prev ? [`<th>전년 대비<small>${est ? '연환산 기준' : '실적 기준'}</small></th>`] : [])
       .join('');
     const spec = [
@@ -111,9 +114,11 @@
         (analysis.prev ? `<td class="delta ${g ? gCls : ''}">${Fmt.delta(g)}</td>` : '') + '</tr>';
     }).join('');
     const partialPrev = prevRows.filter(y => y.factor !== 1);
+    const shortPrev = prevRows.filter(y => y.factor === 1 && y.months < 12);   // 연중 개업한 해: 환산 없이 실제 실적
     const notes = [];
-    if (est) notes.push(`연환산 = ${b.months}개월 실적 × ${(12 / b.months).toFixed(2)} (추정)`);
-    if (partialPrev.length) notes.push(`${partialPrev.map(y => `${y.year}년(${y.months}개월)`).join(', ')}도 12개월로 환산해 비교`);
+    if (est) notes.push(`연환산 = ${b.months}개월 실적 × ${b.factor.toFixed(2)} (추정)` + (fm(b) < 12 ? ` — ${b.startMonth ? `${b.startMonth}월 개업, ` : ''}올해 영업 ${fm(b)}개월 기준` : ''));
+    if (partialPrev.length) notes.push(`${partialPrev.map(y => `${y.year}년(${y.months}개월)`).join(', ')}도 ${partialPrev.map(y => fm(y)).every(v => v === 12) ? '12개월' : '연간'}로 환산해 비교`);
+    if (shortPrev.length) notes.push(`${shortPrev.map(y => `${y.year}년은 ${y.months}개월 영업(연중 개업)`).join(', ')} 실제 실적 — 영업 기간이 달라 증감률이 크게 나타날 수 있음`);
     return `<div class="unit-note">(단위: ${unit === 1000 ? '천원' : '원'})</div><table class="pl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>${notes.length ? `<div class="unit-note left">※ ${notes.join(' · ')}</div>` : ''}`;
   }
 
@@ -152,10 +157,10 @@
       svg += `<text x="${(padL + gi * groupW + groupW / 2).toFixed(1)}" y="${H - 10}" text-anchor="middle" font-size="12" font-weight="600" fill="#4b5563">${label}</text>`;
     });
     const anyPartial = rows.some(y => y.factor !== 1);
-    const legend = rows.map((y, i) => `<span><i style="background:${colors[i]}"></i>${y.year}년${y.factor !== 1 ? ` 실적(${y.months}개월)` : ''}</span>`).join('') + (anyPartial ? `<span><i style="background:var(--y3e)"></i>12개월 환산 추정분</span>` : '');
+    const legend = rows.map((y, i) => `<span><i style="background:${colors[i]}"></i>${y.year}년${y.factor !== 1 ? ` 실적(${y.months}개월)` : (y.months < 12 ? `(${y.months}개월 영업)` : '')}</span>`).join('') + (anyPartial ? `<span><i style="background:var(--y3e)"></i>연환산 추정분</span>` : '');
     return `<div class="chart-wrap"><div class="chart-legend">${legend}</div>
 <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="매출·영업이익 연도별 추이">${svg}</svg>
-<div class="chart-note">${anyPartial ? '진한 색 실제 실적 · 연한 색 12개월 환산 추정(*)' : '막대 위 숫자는 금액(만원·억원)'}${rows.some(y => y.m.op < 0 || y.m.sales < 0) ? ' · 손실은 기준선 아래' : ''}</div></div>`;
+<div class="chart-note">${anyPartial ? '진한 색 실제 실적 · 연한 색 연환산 추정(*)' : '막대 위 숫자는 금액(만원·억원)'}${rows.some(y => y.m.op < 0 || y.m.sales < 0) ? ' · 손실은 기준선 아래' : ''}</div></div>`;
   }
 
   /* ---------- 비용 구조표 ---------- */
@@ -188,7 +193,7 @@
     ${kpi('영업이익', b, 'op', 'op', g('op'), same, est, { sub: '매출 − 원가 − 판관비' })}
     ${options.showTax ? kpiTax(analysis, est) : kpi('당기순이익', b, 'net', 'net', g('net'), same, est)}
   </div>
-  <h3 class="sec">손익계산서 요약 <small>${analysis.rows.length > 1 ? `최근 ${analysis.rows.length}개년` : ''}${est ? ' · 실적과 12개월 환산(추정)' : ''}${same ? ' · 전년 동기' : ''}</small></h3>
+  <h3 class="sec">손익계산서 요약 <small>${analysis.rows.length > 1 ? `최근 ${analysis.rows.length}개년` : ''}${est ? ` · 실적과 ${annWord(b)}(추정)` : ''}${same ? ' · 전년 동기' : ''}</small></h3>
   ${plTable(model)}
   <div class="two-col gap">
     <div><h3 class="sec">매출·영업이익 추이</h3>${chart(analysis)}</div>
@@ -253,7 +258,7 @@
     const nm = t.entity === 'indiv' ? '종합소득세' : '법인세';
     if (t.extra) return taxCompareTable(analysis, unit, nm);
     const r = (label, k, cls) => `<tr class="${cls || ''}"><td>${label}</td><td>${Fmt.wonUnit(t.actual[k], unit)}</td>${est ? `<td>${Fmt.wonUnit(t.annual[k], unit)}</td>` : ''}</tr>`;
-    const head = `<thead><tr><th>구분</th><th>실적 ${shortPeriod(b)} 기준</th>${est ? '<th>12개월 환산 기준</th>' : ''}</tr></thead>`;
+    const head = `<thead><tr><th>구분</th><th>실적 ${shortPeriod(b)} 기준</th>${est ? `<th>${fm(b)}개월 환산 기준</th>` : ''}</tr></thead>`;
     const pretaxRow = `<tr><td>세전이익</td><td class="${b.m.pretax < 0 ? 'neg' : ''}">${Fmt.wonUnit(b.m.pretax, unit)}</td>${est ? `<td class="${b.a.pretax < 0 ? 'neg' : ''}">${Fmt.wonUnit(b.a.pretax, unit)}</td>` : ''}</tr>`;
     if (t.noTax) {
       return `<table class="mini">${head}<tbody>${pretaxRow}${r(`${nm} 예상 산출세액`, 'computed')}${r('예상 세액 합계', 'total', 'total')}</tbody></table>
@@ -415,7 +420,7 @@ ${pending}
         dt('주의', `사업자는 ${Fmt.man(S.hometown.fullCreditUpTo)} 초과분이 세액공제가 아니라 필요경비(장부 반영)입니다. 본인 주소지 지자체에는 기부 불가.`, 'warn'))}
     </div>
     <div>
-      <h3 class="sec">적용 전후 예상 세금 <small>${est ? '12개월 환산 기준' : '연간 기준'}</small></h3>
+      <h3 class="sec">적용 전후 예상 세금 <small>${est ? `${fm(b)}개월 환산 기준` : '연간 기준'}</small></h3>
       <table class="mini"><thead><tr><th>구분</th><th>현재</th><th>세 제도 적용 후</th><th>차이</th></tr></thead><tbody>
 ${row('과세표준', A.taxBase, B.taxBase)}
 ${row('산출세액', A.computed, B.computed)}
@@ -426,7 +431,7 @@ ${row('종합소득세(국세)', A.national, B.national)}
 ${row(`지방소득세(${Math.round(C.localTaxRate * 100)}%)`, A.local, B.local)}
 ${row('예상 세금 합계', A.total, B.total, 'total')}
       </tbody></table>
-      <p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) Ⅱ쪽의 ${est ? '12개월 환산 ' : ''}과세표준(${sv.marginal}% 구간)에 노란우산 ${Fmt.man(sv.yu.amount)} 소득공제, 연금계좌 ${Fmt.man(sv.irp.amount)}×${sv.irp.rate}%·고향사랑기부금 ${Fmt.man(sv.ht.amount)} 세액공제를 반영한 단순 추정.</p>
+      <p class="tax-note">(단위: ${unit === 1000 ? '천원' : '원'}) Ⅱ쪽의 ${est ? `${fm(b)}개월 환산 ` : ''}과세표준(${sv.marginal}% 구간)에 노란우산 ${Fmt.man(sv.yu.amount)} 소득공제, 연금계좌 ${Fmt.man(sv.irp.amount)}×${sv.irp.rate}%·고향사랑기부금 ${Fmt.man(sv.ht.amount)} 세액공제를 반영한 단순 추정.</p>
       <h3 class="sec">같은 ${Fmt.man(sv.totalPay)}, 비용으로 쓸 때와 비교</h3>
       <div class="sv-cmp">
         <div class="a"><div class="t">비용으로 지출</div><div class="v">약 ${man1(sv.expenseSaved)}<small>세금 감소</small></div><p>남는 돈 <b>0원</b> — 쓴 돈은 사라집니다. 꼭 필요한 지출일 때만.</p></div>

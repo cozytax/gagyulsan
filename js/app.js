@@ -16,6 +16,7 @@
     warnings: [], issues: [],
     extras: [newExtra(), newExtra(), newExtra()],   // 추가 비용 시뮬레이션
     planEdit: { client: null, office: null },        // null = 자동 생성 사용
+    fullEdit: {},       // {year: 연간 영업 개월 수}  담당자가 고친 값 (없으면 자동: 연중 개업이면 개업월~12월)
   };
 
   /* ---------- 유틸 ---------- */
@@ -73,6 +74,7 @@
       for (const k of keys) { y.m[k] = ed[k]; y.found[k] = true; }
       for (const t of DERIVED) if (!keys.includes(t)) y.m[t] = A.TOTAL_CALC[t](y.m);
     }
+    for (const y of merged.years) { const fe = state.fullEdit[y.year]; if (fe) y.fullMonths = fe; }
     state.years = merged.years; state.samePeriod = merged.samePeriod;
     state.issues = A.validate(state.years);   // 수정값 반영 후 다시 검증
     if (!state.years.length) { state.analysis = null; renderAll(); return; }
@@ -83,6 +85,12 @@
       lossCarry: num($('loss').value) || 0,
       extras: state.extras.filter(e => e.amount > 0),
     });
+    // 연중 개업 안내: 연환산 기준 개월 수가 12가 아니면 담당자가 확인할 수 있게 알림
+    for (const r of state.analysis.rows) {
+      if (r.fullMonths >= 12 || state.fullEdit[r.year]) continue;
+      if (r.isBase && r.factor !== 1) state.warnings.push(`${r.year}년: ${r.startMonth ? `${r.startMonth}월 개업으로 보고 ` : ''}연환산을 올해 영업 ${r.fullMonths}개월 기준(실적 × ${r.factor.toFixed(2)})으로 계산했습니다. 다르면 '읽어낸 숫자 확인'의 연간 영업 개월 수를 고치세요.`);
+      else if (!r.isBase && r.factor === 1) state.warnings.push(`${r.year}년: ${r.months}개월 영업(연중 개업)한 해로 보고 환산 없이 실제 실적을 표시합니다.`);
+    }
     renderAll();
   }
   /* ---------- 화면: 파일·경고 ---------- */
@@ -121,7 +129,15 @@
         return `<td><input data-year="${y.year}" data-key="${k}" class="${cls}" title="${title}" value="${found || ed || DERIVED.includes(k) ? Fmt.won(y.m[k]) : ''}" placeholder="${!found && !DERIVED.includes(k) ? '미인식' : ''}"></td>`;
       }).join('') + '</tr>').join('');
     const monthsRow = `<tr><td class="lbl">실적 개월 수</td>${ys.map(y => `<td><input data-year="${y.year}" data-months="1" value="${y.months}" style="width:60px"></td>`).join('')}</tr>`;
-    box.innerHTML = `<table class="datatbl"><thead>${head}</thead><tbody>${body}${monthsRow}</tbody></table>`;
+    const rowOf = yr => state.analysis ? state.analysis.rows.find(r => r.year === yr) : null;
+    const fullRow = `<tr><td class="lbl" title="연환산 기준: 실적을 이 개월 수만큼으로 늘려 추정합니다. 연중 개업이면 개업월~12월의 개월 수">연간 영업 개월 수</td>${ys.map(y => { const r = rowOf(y.year); const v = r ? r.fullMonths : 12; return `<td><input data-year="${y.year}" data-full="1" class="${state.fullEdit[y.year] ? 'edited' : ''}" value="${v}" style="width:60px" title="${r && r.factor !== 1 ? `연환산 = 실적 × ${r.factor.toFixed(2)}` : '환산 없음(실제 실적)'}"></td>`; }).join('')}</tr>`;
+    box.innerHTML = `<table class="datatbl"><thead>${head}</thead><tbody>${body}${monthsRow}${fullRow}</tbody></table>`;
+    box.querySelectorAll('input[data-full]').forEach(inp => inp.onchange = () => {
+      const yr = +inp.dataset.year; const v = parseInt(inp.value, 10); const y = state.years.find(x => x.year === yr);
+      if (inp.value.trim() === '') { delete state.fullEdit[yr]; recompute(); return; }      // 비우면 자동으로 되돌림
+      if (!(v >= 1 && v <= 12) || (y && v < y.months)) { toast('연간 영업 개월 수는 실적 개월 수 이상, 12 이하여야 합니다.'); recompute(); return; }
+      state.fullEdit[yr] = v; recompute();
+    });
     box.querySelectorAll('input[data-key]').forEach(inp => inp.onchange = () => {
       const yr = inp.dataset.year, k = inp.dataset.key; const v = num(inp.value);
       if (isNaN(v)) { recompute(); return; }
@@ -280,7 +296,7 @@ ${e.amount && n.note ? `<div class="r3">${escA(n.note)}</div>` : ''}
     const errs = state.issues.filter(i => i.level === 'error'); const warns = state.issues.filter(i => i.level === 'warn');
     const lines = [
       `회사명: ${$('company').value.trim() || '(미입력)'}`,
-      `기준기간: ${window.Report.periodText(b)}${b.factor !== 1 ? ' → 12개월 환산' : ''}`,
+      `기준기간: ${window.Report.periodText(b)}${b.factor !== 1 ? ` → ${b.fullMonths}개월 환산(실적 × ${b.factor.toFixed(2)})${b.fullMonths < 12 ? ' · 연중 개업' : ''}` : ''}`,
       `사업자 구분: ${t.entity === 'indiv' ? '개인(종합소득세)' : '법인(법인세)'} · 업종: ${$('industry').selectedOptions[0].textContent}`,
       `공제·감면: ${t.hasCredit ? t.creditLabel : '없음'} · 추가 비용 반영: ${t.extra ? Fmt.man(t.extra.total) : '없음'}${t.pendingExtras.length ? ` (검토 필요 ${t.pendingExtras.length}건 미반영)` : ''}`,
       `담당자: ${$('preparer').value.trim()} · 담당자 의견: ${$('commentMode').value === 'none' ? '없음' : '포함'} · 출력: A4 ${$('report').querySelectorAll('.page').length}장${t.saving && $('showSaving').checked ? ' (절세 제안 쪽 포함)' : ''}`,
@@ -355,7 +371,7 @@ ${e.amount && n.note ? `<div class="r3">${escA(n.note)}</div>` : ''}
     $('btnAddExtra').onclick = () => { state.extras.push(newExtra()); renderExtras(); const ins = $('extras').querySelectorAll('input.lbl'); if (ins.length) ins[ins.length - 1].focus(); };
     $('btnReset').onclick = () => {
       if (!confirm('올린 파일과 수정한 값을 모두 지울까요?')) return;
-      state.files = []; state.manual = {}; state.edits = {}; state._entitySet = false; state.extras = [newExtra(), newExtra(), newExtra()]; state.planEdit = { client: null, office: null };
+      state.files = []; state.manual = {}; state.edits = {}; state.fullEdit = {}; state._entitySet = false; state.extras = [newExtra(), newExtra(), newExtra()]; state.planEdit = { client: null, office: null };
       $('company').value = ''; ['cmOverall', 'cmFocus', 'cmPlan', 'cmFree'].forEach(id => $(id).value = ''); $('commentMode').value = 'structured'; syncCommentUI();
       $('entity').value = C.defaultEntity || 'indiv'; $('industry').value = ''; recompute();
     };

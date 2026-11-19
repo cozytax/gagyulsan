@@ -1,5 +1,5 @@
 /* =====================================================================
- *  analysis.js — 연도 병합 · 데이터 검증 · 12개월 환산 · 비율 · 예상 세액 · 시뮬레이션 · 진단 문구 · 실행계획
+ *  analysis.js — 연도 병합 · 데이터 검증 · 연환산(연간 영업 개월 수 기준) · 비율 · 예상 세액 · 시뮬레이션 · 진단 문구 · 실행계획
  * ===================================================================== */
 (function () {
   'use strict';
@@ -51,7 +51,7 @@
   function periodToYear(stmt, per) {
     const y = emptyYear(per.year);
     y.months = per.months || 12; y.source = per.kind; y.fileName = stmt.fileName;
-    y.startMonth = per.startMonth; y.endMonth = per.endMonth;
+    y.startMonth = per.startMonth; y.endMonth = per.endMonth; y.termNo = per.termNo || null;
     for (const it of per.items) {
       if (it.level === 'major' && it.key) { if (y.m[it.key] === undefined) { y.m[it.key] = it.value; y.found[it.key] = true; } }
       else if (it.level === 'detail' && it.section && y.details[it.section]) y.details[it.section].push({ label: it.label, value: it.value });
@@ -140,19 +140,37 @@
   const ratio = (a, b) => (b && b !== 0) ? a / Math.abs(b) * 100 : null;
   const growth = (cur, prev) => (prev && prev !== 0) ? (cur - prev) / Math.abs(prev) * 100 : null;
 
+  /* ---------- 연간 영업 개월 수 (연환산의 기준) ----------
+   * 연환산 = 실적 × (그 해 영업 개월 수 ÷ 실적 개월 수). 보통 12개월이지만 연중 개업이면 개업월~12월만 영업한다.
+   *  - 올해 4월 개업, 4~9월 실적(6개월) → 영업 9개월(4~12월) → 실적 × 9/6   (12/6 이 아님)
+   *  - 작년 6월 개업, 6~12월 실적(7개월) → 영업 7개월 → 환산 없이 실제 실적 그대로
+   * 연중 개업 판정: 회계기간 시작월이 1월이 아니고 (개인사업자이거나 제1기). 법인 2기 이후의 시작월≠1월은 12월 결산이 아닌 법인으로 보고 12개월.
+   * 담당자가 '연간 영업 개월 수'를 직접 고치면(y.fullMonths) 그 값을 쓴다.
+   */
+  function fullMonthsOf(y, isBase, entity) {
+    const months = y.months > 0 ? Math.min(12, y.months) : 12;
+    let full;
+    if (y.fullMonths >= 1 && y.fullMonths <= 12) full = y.fullMonths;
+    else if (y.startMonth > 1 && (!y.endMonth || y.endMonth >= y.startMonth) && (entity !== 'corp' || y.termNo === 1)) full = 13 - y.startMonth;
+    else if (!y.startMonth && !isBase) full = months;            // 기간 정보 없는 과거 연도(직접 입력): 결산이 끝난 해로 보고 실제 실적 그대로
+    else full = 12;
+    return Math.max(months, Math.min(12, full));
+  }
+
   function analyze(years, opts) {
     opts = opts || {};
     if (!years.length) return null;
     const base = years[years.length - 1];
-    const factor = base.months > 0 && base.months < 12 ? 12 / base.months : 1;
+    const entityForMonths = opts.entityType || C.defaultEntity || 'indiv';
     const industry = C.industries.find(i => i.key === (opts.industry || '')) || C.industries[0];
 
     const rows = years.map(y => {
       const isBase = y === base;
-      const f = (y.months > 0 && y.months < 12) ? 12 / y.months : 1;
+      const full = fullMonthsOf(y, isBase, entityForMonths);
+      const f = (y.months > 0 && y.months < full) ? full / y.months : 1;
       const a = {}; for (const k of MAJOR_KEYS) a[k] = y.m[k] * f;
       const r = { grossMargin: ratio(a.gross, a.sales), opMargin: ratio(a.op, a.sales), netMargin: ratio(a.net, a.sales), sgaRatio: ratio(a.sga, a.sales), cogsRatio: ratio(a.cogs, a.sales) };
-      return { ...y, isBase, factor: f, a, r, g: {} };
+      return { ...y, isBase, factor: f, fullMonths: full, a, r, g: {} };
     });
     for (let i = 1; i < rows.length; i++) {
       const p = rows[i - 1].a, c = rows[i].a;
@@ -170,7 +188,7 @@
     const tax = estimateTax(b, opts);
     const feedback = buildFeedback(rows, cost, tax, same, industry, opts);
     const plan = buildPlan(rows, cost, tax, same, industry, opts);
-    return { base: b, prev: rows[rows.length - 2] || null, rows, factor, same, industry, cost, tax, feedback, plan, labels: MAJOR_LABEL };
+    return { base: b, prev: rows[rows.length - 2] || null, rows, factor: b.factor, same, industry, cost, tax, feedback, plan, labels: MAJOR_LABEL };
   }
 
   /* 판관비 구조: 올해(연환산) 기준. 업종 중점 항목을 앞에 둔다 */
@@ -314,14 +332,15 @@
     const points = [];
     const push = (tone, title, body) => points.push({ tone, title, body });
     const gw = Fmt.growthWord;
+    const pShort = p && p.fullMonths < 12 ? `(${p.fullMonths}개월 영업)` : '';   // 전년이 연중 개업한 해: 금액은 실제 실적
 
     // 1. 매출
     if (p && b.g.sales !== null) {
       const g = b.g.sales; const w = gw(g);
       const sameTxt = same && same.g.sales !== null ? ` 전년 같은 기간 실제 실적 대비 ${gw(same.g.sales)}.` : '';
-      if (Math.abs(g) <= T.growthFlat) push('info', '매출은 전년 수준', `${estTag}매출 ${Fmt.man(b.a.sales)}, 전년(${Fmt.man(p.a.sales)})과 비슷합니다.${sameTxt}`);
-      else if (g > 0) push('good', `매출 ${w} 예상`, `${estTag}매출 ${Fmt.man(b.a.sales)}, 전년 ${Fmt.man(p.a.sales)} 대비 ${w} 예상.${sameTxt}` + (pp && p.g.sales !== null && p.g.sales > T.growthFlat ? ' 2년 연속 성장입니다.' : ''));
-      else push('warn', `매출 ${w} 예상`, `${estTag}매출 ${Fmt.man(b.a.sales)}, 전년 ${Fmt.man(p.a.sales)} 대비 ${w} 예상.${sameTxt} 어느 거래처·품목에서 줄었는지 확인이 필요합니다.`);
+      if (Math.abs(g) <= T.growthFlat) push('info', '매출은 전년 수준', `${estTag}매출 ${Fmt.man(b.a.sales)}, 전년(${Fmt.man(p.a.sales)}${pShort})과 비슷합니다.${sameTxt}`);
+      else if (g > 0) push('good', `매출 ${w} 예상`, `${estTag}매출 ${Fmt.man(b.a.sales)}, 전년 ${Fmt.man(p.a.sales)}${pShort} 대비 ${w} 예상.${sameTxt}` + (pp && p.g.sales !== null && p.g.sales > T.growthFlat ? ' 2년 연속 성장입니다.' : ''));
+      else push('warn', `매출 ${w} 예상`, `${estTag}매출 ${Fmt.man(b.a.sales)}, 전년 ${Fmt.man(p.a.sales)}${pShort} 대비 ${w} 예상.${sameTxt} 어느 거래처·품목에서 줄었는지 확인이 필요합니다.`);
     } else {
       push('info', '올해 매출', `${estTag}매출 ${Fmt.man(b.a.sales)}입니다.` + (p ? '' : ' 전년 손익계산서가 있으면 추이를 비교해 드립니다.'));
     }
@@ -330,8 +349,8 @@
     {
       const om = b.r.opMargin;
       const turned = p ? ((p.a.op <= 0 && b.a.op > 0) ? 'toProfit' : (p.a.op > 0 && b.a.op <= 0) ? 'toLoss' : null) : null;
-      if (turned === 'toProfit') push('good', '흑자 전환 예상', `전년 영업손실 ${Fmt.man(Math.abs(p.a.op))} → ${estTag}영업이익 ${Fmt.man(b.a.op)}. 이익이 생기는 만큼 세금도 생기므로 미리 준비하겠습니다.`);
-      else if (turned === 'toLoss') push('warn', '적자 전환 예상', `전년 영업이익 ${Fmt.man(p.a.op)} → ${estTag}영업손실 ${Fmt.man(Math.abs(b.a.op))}. 비용이 커진 원인을 항목별로 확인하겠습니다.`);
+      if (turned === 'toProfit') push('good', '흑자 전환 예상', `전년 영업손실 ${Fmt.man(Math.abs(p.a.op))}${pShort} → ${estTag}영업이익 ${Fmt.man(b.a.op)}. 이익이 생기는 만큼 세금도 생기므로 미리 준비하겠습니다.`);
+      else if (turned === 'toLoss') push('warn', '적자 전환 예상', `전년 영업이익 ${Fmt.man(p.a.op)}${pShort} → ${estTag}영업손실 ${Fmt.man(Math.abs(b.a.op))}. 비용이 커진 원인을 항목별로 확인하겠습니다.`);
       else if (b.a.op <= 0) push('warn', '영업손실 지속', `${estTag}영업손실 ${Fmt.man(Math.abs(b.a.op))}. 매출 ${Fmt.man(b.a.sales)}보다 비용 ${Fmt.man(b.a.cogs + b.a.sga)}이 큽니다. 줄일 수 있는 고정비를 함께 점검하겠습니다.`);
       else if (om !== null && om < T.opMarginLow) push('warn', '영업이익률 낮음', `매출 100원당 영업이익 ${om.toFixed(1)}원(${Fmt.pct(om)}). 판매가격·원가·고정비 점검이 필요합니다.`);
       else if (om !== null && om >= T.opMarginGood) push('good', '영업이익률 양호', `매출 100원당 영업이익 ${om.toFixed(1)}원(${Fmt.pct(om)})` + (p && p.r.opMargin !== null ? `, 전년 ${Fmt.pct(p.r.opMargin)}에서 ${om >= p.r.opMargin ? '개선' : '다소 하락'}.` : '.') + ' 이익이 큰 만큼 공제·감면 적용을 검토하겠습니다.');
@@ -393,7 +412,9 @@
     while (points.length > 5) { const i = points.map(x => x.tone).lastIndexOf('info'); points.splice(i >= 0 ? i : points.length - 1, 1); }
 
     const summary = buildSummary(rows, same, est);
-    const note = est ? `올해 수치는 ${b.months}개월 실적을 12개월로 단순 환산한 추정치입니다.` : '';
+    const note = est ? (b.fullMonths < 12
+      ? `올해 수치는 ${b.months}개월 실적을 올해 영업 기간 ${b.fullMonths}개월(${b.startMonth ? `${b.startMonth}월 개업 ~ ` : ''}12월)로 단순 환산한 추정치입니다.`
+      : `올해 수치는 ${b.months}개월 실적을 12개월로 단순 환산한 추정치입니다.`) : '';
     return { summary, note, points };
   }
 
@@ -440,5 +461,5 @@
     return { client: client.slice(0, 4), office: office.slice(0, 4), due };
   }
 
-  window.Analysis = { Fmt, MAJOR_KEYS, MAJOR_LABEL, TOTAL_CALC, mergeStatements, analyze, emptyYear, fillDerived, getBrackets, normalizeExtra, validate };
+  window.Analysis = { Fmt, MAJOR_KEYS, MAJOR_LABEL, TOTAL_CALC, mergeStatements, analyze, emptyYear, fillDerived, getBrackets, normalizeExtra, validate, fullMonthsOf };
 })();
